@@ -38,29 +38,39 @@ def deconvolution(m):
     
 
 from cvxpy import *
-def projection(moments):
-    # project to a valid moment sequence on [-1,1]
-    # assume the length of moments is odd
+def projection(moments, a=-1, b=1):
+    # input: a sequence of estimated moments, starting from degree 1
+    # output: a sequence of valid moments on [a,b], starting from degree 1 (default [a,b]=[-1,1])
+    # function: project to a valid moment sequence on [a,b]
     n = len(moments)
-    x = Variable(n)
+    if n == 0:
+        return moments
+    if n == 1:
+        moments[0] = max(a,min(b,moments[0]))
+        return moments
 
+    
+    x = Variable(n) # variables [m1,m2,...]
+    obj = Minimize(sum_squares(x - moments)) # objective function
+
+    # the following gives constraints
+    # Ref for PSD condition: [Lasserre 2009, Theorem 3.3 and 3.4]
     if n % 2 == 1:
+        # odd case
         k = int((n+1)/2)
-        A = Variable(k,k)
-        B = Variable(k,k)
-        constraints = [A+B>>0, A-B>>0]
+        H = Variable(k,k+1)
+        constraints = [H[:,1:]>>a*H[:,:k], b*H[:,:k]>>H[:,1:]]
         for i in range(k):
-            for j in range(k):
+            for j in range(k+1):
                 if i==0 and j==0:
-                    constraints.append(A[0,0]==1)
-                    constraints.append(B[0,0]==x[0])
+                    constraints.append(H[0,0]==1)
                 else:
-                    constraints.append(A[i,j]==x[i+j-1])
-                    constraints.append(B[i,j]==x[i+j])
+                    constraints.append(H[i,j]==x[i+j-1])
     else:
-        k = int(n/2)
+        # even case
+        k = int(n/2)+1
         H = Variable(k,k)
-        constraints = []
+        constraints = [H>>0, (a+b)*H[:k-1,1:]>>a*b*H[:k-1,:k-1]+H[1:,1:]]
         for i in range(k):
             for j in range(k):
                 if i==0 and j==0:
@@ -68,10 +78,9 @@ def projection(moments):
                 else:
                     constraints.append(H[i,j]==x[i+j-1])
                     
-    error = sum_squares(x - moments)
-    objective = Minimize(error)
-    prob = Problem(objective, constraints)
-    prob.solve(solver=CVXOPT)
+    
+    prob = Problem(obj, constraints)
+    opt = prob.solve(solver=CVXOPT,abstol=1e-10)
     
     return x.value.T.A1
 
