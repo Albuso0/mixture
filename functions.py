@@ -1,6 +1,6 @@
 import numpy as np
 import scipy.optimize
-
+import math
 
 
 def HermiteMoments(m):
@@ -86,17 +86,35 @@ def projection(moments, a=-1, b=1):
 
 
 
-from sympy import *
+from sympy import * 
 def mom_symbol(m):
-    p, q= symbols('p q', nonnegative=True, real=True);
-    x, y= symbols('x y', real=True);
-    s = solve( [p+q-1, p*x+q*y-m[0], p*x*x+q*y*y-m[1], p*(x**3)+q*(y**3)-m[2]], [p,x,q,y])
+    n = len(m)
+    if n % 2 == 0:
+        n = n-1 # only use 2k-1 moments
+    k = int((n+1)/2)
+    
+    p = symbols('p0:%d'%(k), nonnegative=True, real=True);
+    x = symbols('x0:%d'%(k), real=True);
+
+    eq = -1
+    for i in range(k):
+        eq = eq + p[i]
+    equations = [eq]
+
+    for i in range(n):
+        eq = -m[i]
+        for j in range(k):
+            eq = eq + p[j]*(x[j]**(i+1))
+        equations.append(eq)
+    s = solve(equations,list(p)+list(x))
+    # s = nonlinsolve(equations,list(p)+list(x))
+    
     if (len(s)==0):
         print('No solution found!')
         print('Moments:', m)
         return False
     else:
-        print('solution:',s[0])
+        print('solution:',s[0])  # format: (p1,p2,...,x1,x2,...)
         return True
 
 

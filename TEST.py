@@ -21,14 +21,15 @@ from functions import *
 # print(projection(m))
 
 
-m = [0,4]
-print(projection(m,-3,1))
 
-# m = moment([0.000205538730271, -6.11160027408564, 0.999794461269729, 0.00462288573198274],3)
-# print('moments:',m)
-# mom_symbol(m)
-# print('moments:',projection(m))
-# mom_symbol(projection(m,-10,10))
+
+
+
+m = moment([0.000205538730271, -6.11160027408564, 0.999794461269729, 0.00462288573198274],3)
+print('moments:',m)
+mom_symbol(m)
+print('moments:',projection(m))
+mom_symbol(projection(m,-1,1))
 
 
 # print(HermiteMoments([1,1,2,4,10]))
