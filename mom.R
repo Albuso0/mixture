@@ -2,38 +2,71 @@ library(gmm)
 
 
 
+##### k=2
 g <- function(u,x) {
-    m1 <- u[1]*u[2]+(1-u[1])*u[3]-x
-    m2 <- u[1]*u[2]^2+(1-u[1])*u[3]^2+1-x^2
-    m3 <- u[1]*u[2]^3+(1-u[1])*u[3]^3+3*x-x^3
-    f <- cbind(m1,m2,m3)
+    g1 <- u[1]*u[2]+(1-u[1])*u[3]-x
+    g2 <- u[1]*u[2]^2+(1-u[1])*u[3]^2+1-x^2
+    g3 <- u[1]*u[2]^3+(1-u[1])*u[3]^3+3*x-x^3
+    f <- cbind(g1,g2,g3)
     return(f)
 }
 
-g1 <- function(tet,x)
-{
-    m1 <- (tet[1]-x)
-    m2 <- (tet[2]^2 - (x - tet[1])^2)
-    m3 <- x^3-tet[1]*(tet[1]^2+3*tet[2]^2)
-    f <- cbind(m1,m2,m3)
-    ## f <- cbind(m1,m2)
+##### k=3
+g3 <- function(u,x) {
+    f1 <- u[1]*u[2] + u[3]*u[4] +(1-u[1]-u[2])*u[5]-x
+    f2 <- u[1]*u[2]^2 + u[3]*u[4]^2 +(1-u[1]-u[2])*u[5]^2-(x^2-1)
+    f3 <- u[1]*u[2]^3 + u[3]*u[4]^3 +(1-u[1]-u[2])*u[5]^3-(x^3-3*x)
+    f4 <- u[1]*u[2]^4 + u[3]*u[4]^4 +(1-u[1]-u[2])*u[5]^4-(x^4-6*x^2+3)
+    f5 <- u[1]*u[2]^5 + u[3]*u[4]^5 +(1-u[1]-u[2])*u[5]^5-(x^5-10*x^3+15*x)
+    f <- cbind(f1,f2,f3,f4,f5)
     return(f)
 }
+
+##### k=5
+g5 <- function(u,x) {
+    f1 <- u[1]*u[2] + u[3]*u[4] +u[5]*u[6] + u[7]*u[8]+ (1-u[1]-u[3]-u[5]-u[7])*u[8]-x
+    f2 <- u[1]*u[2]^2 + u[3]*u[4]^2 +u[5]*u[6]^2 + u[7]*u[8]^2 + (1-u[1]-u[3]-u[5]-u[7])*u[8]^2-(x^2-1)
+    f3 <- u[1]*u[2]^3 + u[3]*u[4]^3 +u[5]*u[6]^3 + u[7]*u[8]^3 + (1-u[1]-u[3]-u[5]-u[7])*u[8]^3-(x^3-3*x)
+    f4 <- u[1]*u[2]^4 + u[3]*u[4]^4 +u[5]*u[6]^4 + u[7]*u[8]^4 + (1-u[1]-u[3]-u[5]-u[7])*u[8]^4-(x^4-6*x^2+3)
+    f5 <- u[1]*u[2]^5 + u[3]*u[4]^5 +u[5]*u[6]^5 + u[7]*u[8]^5 + (1-u[1]-u[3]-u[5]-u[7])*u[8]^5-(x^5-10*x^3+15*x)
+    f6 <- u[1]*u[2]^6 + u[3]*u[4]^6 +u[5]*u[6]^6 + u[7]*u[8]^6 + (1-u[1]-u[3]-u[5]-u[7])*u[8]^6-(x^6-15*x^4+45*x^2-15)
+    f7 <- u[1]*u[2]^7 + u[3]*u[4]^7 +u[5]*u[6]^7 + u[7]*u[8]^7 + (1-u[1]-u[3]-u[5]-u[7])*u[8]^7-(x^7-21*x^5+105*x^3-105)
+    f8 <- u[1]*u[2]^8 + u[3]*u[4]^8 +u[5]*u[6]^8 + u[7]*u[8]^8 + (1-u[1]-u[3]-u[5]-u[7])*u[8]^8-(x^8-28*x^6+210*x^4-420*x^2+105)
+    f9 <- u[1]*u[2]^9 + u[3]*u[4]^9 +u[5]*u[6]^9 + u[7]*u[8]^9 + (1-u[1]-u[3]-u[5]-u[7])*u[8]^9-(x^9-36*x^7+378*x^5-1260*x^3+945*x)
+    f <- cbind(f1,f2,f3,f4,f5,f6,f7,f8,f9)
+    return(f)
+}
+
+
+## g1 <- function(tet,x)
+## {
+##     m1 <- (tet[1]-x)
+##     m2 <- (tet[2]^2 - (x - tet[1])^2)
+##     m3 <- x^3-tet[1]*(tet[1]^2+3*tet[2]^2)
+##     f <- cbind(m1,m2,m3)
+##     ## f <- cbind(m1,m2)
+##     return(f)
+## }
+
 
 n <- 10000
 wcnt <- 0
-for ( i in 1:1000) {
+rep <- 1
+for ( i in 1:rep) {
     x <- rnorm(n, mean = 0, sd = 1)
     ## print(res <- gmm(g1,x,c(mu = 0, sig = 0)))
-    print(gmm(g,x,c(p1=0.5,x1=0,x2=0)))
-    tryCatch(print(gmm(g,x,c(p1=0.5,x1=0,x2=0))), warning=function(w) {
-        wcnt <<- wcnt + 1
-        print(w)
-    } )
+    print(gmm(g,x,c(p1=0.5,x1=0,x2=0)),type="twoStep")
+    print(gmm(g3,x,c(p1=0.3,x1=0,p2=0.3,x2=0,x3=1)),type="twoStep")
+    ## print(gmm(g5,x,c(p1=0.2,x1=0,p2=0.2,x2=0,p3=0.2,x3=1,p4=0.2,x4=0.2,x5=0.2)),type="twoStep")
+    ## print(gmm(g,x,c(p1=0.5,x1=0,x2=0)))
+    ## tryCatch(print(gmm(g,x,c(p1=0.5,x1=0,x2=0))), warning=function(w) {
+    ##     wcnt <<- wcnt + 1
+    ##     print(w)
+    ## } )
 
     ## vcov(res)
     ## summary(res)
     ## print(res)
 }
 
-print(sprintf("Warnings: %d/1000 experiments", wcnt))
+## print(sprintf("Warnings: %d/1000 experiments", wcnt))

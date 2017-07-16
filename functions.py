@@ -37,7 +37,8 @@ def deconvolution(m):
 
     
 
-from cvxpy import *
+# from cvxpy import *
+import cvxpy
 def projection(moments, a=-1, b=1):
     # input: a sequence of estimated moments, starting from degree 1
     # output: a sequence of valid moments on [a,b], starting from degree 1 (default [a,b]=[-1,1])
@@ -50,15 +51,15 @@ def projection(moments, a=-1, b=1):
         return moments
 
     
-    x = Variable(n) # variables [m1,m2,...]
-    obj = Minimize(sum_squares(x - moments)) # objective function
+    x = cvxpy.Variable(n) # variables [m1,m2,...]
+    obj = cvxpy.Minimize(cvxpy.sum_squares(x - moments)) # objective function
 
     # the following gives constraints
     # Ref for PSD condition: [Lasserre 2009, Theorem 3.3 and 3.4]
     if n % 2 == 1:
         # odd case
         k = int((n+1)/2)
-        H = Variable(k,k+1)
+        H = cvxpy.Variable(k,k+1)
         constraints = [H[:,1:]>>a*H[:,:k], b*H[:,:k]>>H[:,1:]]
         for i in range(k):
             for j in range(k+1):
@@ -69,7 +70,7 @@ def projection(moments, a=-1, b=1):
     else:
         # even case
         k = int(n/2)+1
-        H = Variable(k,k)
+        H = cvxpy.Variable(k,k)
         constraints = [H>>0, (a+b)*H[:k-1,1:]>>a*b*H[:k-1,:k-1]+H[1:,1:]]
         for i in range(k):
             for j in range(k):
@@ -79,15 +80,17 @@ def projection(moments, a=-1, b=1):
                     constraints.append(H[i,j]==x[i+j-1])
                     
     
-    prob = Problem(obj, constraints)
-    opt = prob.solve(solver=CVXOPT,abstol=1e-10)
+    prob = cvxpy.Problem(obj, constraints)
+    opt = prob.solve(solver=cvxpy.CVXOPT,abstol=1e-10)
     
     return x.value.T.A1
 
 
 
-from sympy import * 
+from sympy import symbols, solve
 def mom_symbol(m):
+    # input: a sequence of estimated moments, starting from degree 1
+    # output format: [p1,x1,p2,x2,...]
     n = len(m)
     if n % 2 == 0:
         n = n-1 # only use 2k-1 moments
@@ -103,21 +106,33 @@ def mom_symbol(m):
 
     for i in range(n):
         eq = -m[i]
+        ########### truncate a real number to rational
+        # eq = -nsimplify(m[i], tolerance=0.1)
+        # eq = float('%.2g' % -m[i])
         for j in range(k):
             eq = eq + p[j]*(x[j]**(i+1))
         equations.append(eq)
-    s = solve(equations,list(p)+list(x))
+
+    var = [x for xs in zip(p, x) for x in xs] # format: [p1,x1,p2,x2,...]
+    s = solve(equations,var)
+    # s = solveset(equations,list(p)+list(x))
     # s = nonlinsolve(equations,list(p)+list(x))
     
+    ########## some other tools in SymPy
+    # print(equations)
+    # s = solve_poly_system(equations,list(p)+list(x))
+    # s = solve_triangulated(equations,list(p)+list(x))
+    # s = solve_triangulated(equations,p[0],p[1],x[0],x[1])
+
+    ########## test over simple rational coefficients
+    # testEq = [x[0]*p[0] - 2*p[0], 2*p[0]**2 - x[0]**2]
+    # s = solve_triangulated(testEq, x[0], p[0])
+    
+    
     if (len(s)==0):
-        print('No solution found!')
-        print('Moments:', m)
-        return False
+        return []
     else:
-        print('solution:',s[0])  # format: (p1,p2,...,x1,x2,...)
-        return True
-
-
+        return [x for x in s[0]]
 
     
 # def mom_numeric(m):
@@ -129,8 +144,23 @@ def mom_symbol(m):
 #     x = scipy.optimize.broyden2(equation, x0)
 #     print(x)
 #     print(equation(x))
-    
 
+
+
+import subprocess
+def quadrature(m):
+    # return empty if the moment matrix is not PD (even if it is PSD)
+    # TODO: resolve the case of PSD
+    # output format: [p1,x1,p2,x2,...]
+    args = ['./quadmom/quadmom']
+    args.extend([str(x) for x in m])
+    try:
+        p = subprocess.check_output(args, universal_newlines=True) 
+        res = [float(s) for s in p.split()] 
+        return res
+    except:
+        res = []
+        return res
 
     
 def moment(distribution, degree):
@@ -145,3 +175,51 @@ def moment(distribution, degree):
         ans.append(np.dot(mass, monomial))
         monomial = np.multiply(monomial,atom)
     return ans
+
+
+def empiricalMoment(samples, degree):
+    # input: samples x=(x1...xn), degree k
+    # output: empirical moments of x of degree up to k (start from first degree)
+    rawm = []
+    monomial = samples
+    for i in range(degree):
+        rawm.append(np.mean(monomial))
+        monomial = np.multiply(monomial,samples)
+    return rawm
+
+
+import math
+def EM(samples, theta0, eps=1e-6, output=False):
+    # input: theta0 = [p1,x1,p2,x2...], eps= termination accuracy
+    # if output= True, will print results in each iteration 
+    # output: theta = [p1,x1,p2,x2...]
+    k = int( (len(theta0)+1)/2 )
+    n = len(samples)
+
+    curP = np.asarray(theta0[0::2])
+    curX = np.asarray(theta0[1::2])
+    samples = np.asarray(samples)
+    
+    while(True):
+        preP = curP
+        preX = curX
+
+        T = np.zeros((n,k))
+        for i in range(n):
+            for j in range(k):
+                T[i][j]= preP[j]*math.exp( -((samples[i]-preX[j])**2)/2 )
+            T[i]=np.divide(T[i],sum(T[i]))
+
+        N = np.sum(T,axis=0)
+
+        curP = N/np.sum(N)
+        curX = np.divide( np.matmul(samples,T), N )
+
+        if output:
+            print(curP,curX)
+
+        if ( np.linalg.norm(np.subtract(curP,preP))+np.linalg.norm(np.subtract(curX,preX))<eps ):
+            break
+
+
+    return [x for xs in zip(curP, curX) for x in xs] # format: [p1,x1,p2,x2,...]

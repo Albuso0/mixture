@@ -25,11 +25,73 @@ from functions import *
 
 
 
-m = moment([0.000205538730271, -6.11160027408564, 0.999794461269729, 0.00462288573198274],3)
+n = 10000
+k = 2
+
+############ X = p N(1,1) + (1-p) N(1,1)
+# p = 0.8
+# z = np.random.binomial(n, p)
+# x = np.random.randn(1, n)
+# x = x[0]
+# x[0:z:] += 1
+# x = np.random.permutation(x)
+
+
+############ X=Z
+x = np.random.randn(1, n)
+x = x[0]
+
+
+
+start = [0.5,-1,0.5,1] # format:[p1,x1,p2,x2....]
+pEM = EM(x, start, 1e-6, True)
+weights = pEM[0::2]
+atoms = pEM[1::2]
+print('EM:', weights, atoms)
+
+
+
+# raw moments: moments of X=U+Z of degree up to 2k-1
+rawm = empiricalMoment(x, 2*k-1)
+
+# deconvolution: moments of U
+m = deconvolution(rawm)
+
+# ordinary MoM
+pMOM = mom_symbol(m)
+weights = pMOM[0::2]
+atoms = pMOM[1::2]
+print('Ordinary MoM:', weights, atoms)
+        
+# Denoised MoM
+pDMOM = quadrature(projection(m,-1,1))
+weights = pDMOM[0::2]
+atoms = pDMOM[1::2]
+print('Denoised MoM:', weights, atoms)
+
+
+
+
+
+
+
+
+
+
+print('\n')
+
+k = 2;
+trueP = [0.000205538730271, -6.11160027408564, 0.999794461269729, 0.00462288573198274]; # format: [p1,x1,p2,x2...]
+m = moment(trueP, 2*k-1)
+mp = projection(m,-10,1)
 print('moments:',m)
-mom_symbol(m)
-print('moments:',projection(m))
-mom_symbol(projection(m,-1,1))
+print('projected moments:',mp)
+print('Denoised MoM [p1,x1,p2,x2...]=',quadrature(mp))
+print('Ordinary MoM [p1,x1,p2,x2...]=', mom_symbol(m))
+
+
+
+
 
 
 # print(HermiteMoments([1,1,2,4,10]))
@@ -45,35 +107,46 @@ mom_symbol(projection(m,-1,1))
 # print(np.linalg.eigvals(10*h1-h2))
 
 
+
+
+
+
+############################################################
+################### repeated experiments ###################
+############################################################
+Total = 0 # total number of experiments
+k = 2
+
 succO = 0
 succD = 0
-Total = 0
 for i in range(Total):
+    # samples
     x = np.random.randn(1, 10000)
+    x = x[0]
 
-    # raw moments: moments of X=U+Z
-    rawm = []
-    monomial = x
-    for i in range(3):
-        rawm.append(np.mean(monomial))
-        monomial = np.multiply(monomial,x)
-        
+    # raw moments: moments of X=U+Z of degree up to 2k-1
+    rawm = empiricalMoment(x, 2*k-1)
+    
     # deconvolution: moments of U
     m = deconvolution(rawm)
     
-    
-    print('Ordinary MoM')
-    if (mom_symbol(m)):
-        succO = succO+1
-    
 
-    print('Denoised MoM')
-    if(mom_symbol(projection(m))):
+    # ordinary MoM
+    pMOM = mom_symbol(m)
+    print('Ordinary MoM:', pMOM)
+    if (len(pMOM)>0):
+        succO = succO+1
+        
+    # Denoised MoM
+    pDMOM = quadrature(projection(m))
+    print('Denoised MoM:', pDMOM)
+    if (len(pDMOM)>0):
         succD = succD+1
 
     print('\n')
-
-print('success in ordinary MoM: %d/%d'%(succO,Total))
-print('success in denoised MoM: %d/%d'%(succD,Total))
+    
+if Total>0:
+    print('success in ordinary MoM: %d/%d'%(succO,Total))
+    print('success in denoised MoM: %d/%d'%(succD,Total))
 
 
