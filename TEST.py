@@ -38,24 +38,20 @@ for expN in range(1):
 
     # EM
     start = finiteRV(prob=[0.5,0.5], val=[-1,1])
-    pEM,iterN = EM(x, start, eps=1e-6, printIter=False, maxIter=5000)
-    print('EM:', pEM.p, pEM.x,  W1(pEM,GM.meanRV()) )
-
-
-
+    emRV,iterN = EM(x, start, eps=1e-6, printIter=False, maxIter=5000)
+    print('EM:', emRV.p, emRV.x,  W1(emRV, GM.meanRV()) )
+    
     # estimate moments of U
     m = deconvolution(empiricalMoment(x, 2*k-1))
 
     # ordinary MoM
-    pMOM = mom_symbol(m)
-    print('Ordinary MoM:', pMOM.p, pMOM.x, W1(pEM,GM.meanRV()) )
+    momRV = mom_symbol(m)
+    print('Ordinary MoM:', momRV.p, momRV.x, W1(momRV, GM.meanRV()) )
     
     # Denoised MoM
-    pDMOM = quadrature(projection(m,-2,12))
-    weights = pDMOM[0::2]
-    atoms = pDMOM[1::2]
-    print('Denoised MoM:', weights, atoms, np.sum(np.dot(weights,np.abs(atoms))) )
-
+    dmomRV = quadmom(projection(m,-2,12))
+    print('Denoised MoM:', dmomRV.p, dmomRV.x, W1(dmomRV, GM.meanRV()) )
+    
     print('\n')
 
 

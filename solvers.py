@@ -3,7 +3,7 @@ import scipy.optimize
 import math
 from discreteRV import finiteRV
 import cvxpy
-import sympy 
+import sympy
 
 
 def empiricalMoment(samples, degree):
@@ -170,23 +170,46 @@ def mom_symbol(m):
 #     print(equation(x))
 
 
+def quadmom(m):
+    """ compute quadrature from moments
+    ref: Gene Golub, John Welsch, Calculation of Gaussian Quadrature Rules
 
-import subprocess
-def quadrature(m):
-    # return empty if the moment matrix is not PD (even if it is PSD)
-    # TODO: resolve the case of PSD
-    # output format: [p1,x1,p2,x2,...]
-    args = ['./quadmom/quadmom']
-    args.extend([str(x) for x in m])
-    try:
-        p = subprocess.check_output(args, universal_newlines=True) 
-        res = [float(s) for s in p.split()] 
-        return res
-    except:
-        res = []
-        return res
+    Args:
+    m: a valid moments sequence
 
+    Returns:
+    U: quadrature
+    """
+
+    m = np.asarray(m)
+    ## TODO: check positive definite and decide to use how many moments
+    if len(m) % 2 == 1:
+        m = np.append(m,1e10)
+    n = int(len(m)/2)
+    m = np.insert(m,0,1)
+
+
+    h = scipy.linalg.hankel(m[:n+1:], m[n::]) # Hankel matrix
+    r = np.transpose(np.linalg.cholesky(h)) # upper triangular Cholesky factor
+
+    # Compute alpha and beta from r, using Golub and Welsch's formula.
+    alpha = np.zeros(n)
+    alpha[0] = r[0][1] / r[0][0]
+    for i in range(1,n):
+        alpha[i] = r[i][i+1]/r[i][i] - r[i-1][i]/r[i-1][i-1]
+
+    beta = np.zeros(n-1)
+    for i in range(n-1):
+        beta[i]=r[i+1][i+1]/r[i][i]
+
+    jacobi = np.diag(alpha,0) + np.diag(beta,1) + np.diag(beta,-1)
+
+    eigval, eigvec = np.linalg.eig(jacobi)
     
+    x = eigval
+    w = m[0] * np.power(eigvec[0],2)
+    
+    return finiteRV(prob=w, val=x)
 
 
 
