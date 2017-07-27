@@ -1,11 +1,24 @@
 import numpy as np
 import scipy.optimize
 import math
+from discreteRV import finiteRV
+
+def empiricalMoment(samples, degree):
+    # input: samples x=(x1...xn), degree k
+    # output: empirical moments of x of degree up to k (start from first degree)
+    rawm = []
+    monomial = samples
+    for i in range(degree):
+        rawm.append(np.mean(monomial))
+        monomial = np.multiply(monomial,samples)
+    return rawm
 
 
 def HermiteMoments(m):
-    # input: moments of X of degree 0 to L
-    # output: moments of H_i(X) for i=0,...,L
+    """ Compute the moments of Hermite polynomials from raw moments
+    input: moments of X of degree 0 to L
+    output: moments of H_i(X) for i=0,...,L
+    """
     l = len(m)
     ans = [0]*l
     if ( l > 0 ):
@@ -27,8 +40,10 @@ def HermiteMoments(m):
 
 
 def deconvolution(m):
-    # input: moments of U+Z of degree 1 to L
-    # output: moments of U of degree 1 to L
+    """ Deconvolve the moments of U+Z
+    input: moments of U+Z of degree 1 to L
+    output: moments of U of degree 1 to L
+    """
     m.insert(0,1)
     mout = HermiteMoments(m)
     return mout[1::]
@@ -37,7 +52,6 @@ def deconvolution(m):
 
     
 
-# from cvxpy import *
 import cvxpy
 def projection(moments, a=-1, b=1):
     # input: a sequence of estimated moments, starting from degree 1
@@ -87,17 +101,19 @@ def projection(moments, a=-1, b=1):
 
 
 
-from sympy import symbols, solve
+import sympy 
 def mom_symbol(m):
-    # input: a sequence of estimated moments, starting from degree 1
-    # output format: [p1,x1,p2,x2,...]
+    """ Symbolic solver for ordinary method of moments
+    input: a sequence of estimated moments, starting from degree 1
+    output format: [p1,x1,p2,x2,...]
+    """
     n = len(m)
     if n % 2 == 0:
         n = n-1 # only use 2k-1 moments
     k = int((n+1)/2)
     
-    p = symbols('p0:%d'%(k), nonnegative=True, real=True);
-    x = symbols('x0:%d'%(k), real=True);
+    p = sympy.symbols('p0:%d'%(k), nonnegative=True, real=True);
+    x = sympy.symbols('x0:%d'%(k), real=True);
 
     eq = -1
     for i in range(k):
@@ -114,7 +130,7 @@ def mom_symbol(m):
         equations.append(eq)
 
     var = [x for xs in zip(p, x) for x in xs] # format: [p1,x1,p2,x2,...]
-    s = solve(equations,var)
+    s = sympy.solve(equations,var)
     # s = solveset(equations,list(p)+list(x))
     # s = nonlinsolve(equations,list(p)+list(x))
     
@@ -163,33 +179,11 @@ def quadrature(m):
         return res
 
     
-def moment(distribution, degree):
-    # Return the moments of the input distribution up to the given degree (start from first degree)
-    # distribution: [p1,x1,p2,x2,...]
-    mass = distribution[0::2]
-    atom = distribution[1::2]
-    ans = []
 
-    monomial = atom
-    for n in range(degree):
-        ans.append(np.dot(mass, monomial))
-        monomial = np.multiply(monomial,atom)
-    return ans
-
-
-def empiricalMoment(samples, degree):
-    # input: samples x=(x1...xn), degree k
-    # output: empirical moments of x of degree up to k (start from first degree)
-    rawm = []
-    monomial = samples
-    for i in range(degree):
-        rawm.append(np.mean(monomial))
-        monomial = np.multiply(monomial,samples)
-    return rawm
 
 
 import math
-def EM(samples, theta0, eps=1e-6, output=False):
+def EM(samples, theta0, eps=1e-6, output=False, maxIter=5000):
     # input: theta0 = [p1,x1,p2,x2...], eps= termination accuracy
     # if output= True, will print results in each iteration 
     # output: theta = [p1,x1,p2,x2...]
@@ -199,7 +193,8 @@ def EM(samples, theta0, eps=1e-6, output=False):
     curP = np.asarray(theta0[0::2])
     curX = np.asarray(theta0[1::2])
     samples = np.asarray(samples)
-    
+
+    iterN = 0
     while(True):
         preP = curP
         preX = curX
@@ -212,13 +207,14 @@ def EM(samples, theta0, eps=1e-6, output=False):
 
         N = np.sum(T,axis=0)
 
+        iterN += 1
         curP = N/np.sum(N)
         curX = np.divide( np.matmul(samples,T), N )
 
         if output:
             print(curP,curX)
 
-        if ( np.linalg.norm(np.subtract(curP,preP))+np.linalg.norm(np.subtract(curX,preX))<eps ):
+        if ( iterN > maxIter or np.linalg.norm(np.subtract(curP,preP))+np.linalg.norm(np.subtract(curX,preX))<eps ):
             break
 
 

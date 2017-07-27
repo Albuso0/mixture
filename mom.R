@@ -55,9 +55,10 @@ rep <- 1
 for ( i in 1:rep) {
     x <- rnorm(n, mean = 0, sd = 1)
     ## print(res <- gmm(g1,x,c(mu = 0, sig = 0)))
-    print(gmm(g,x,c(p1=0.5,x1=0,x2=0)),type="twoStep")
-    print(gmm(g3,x,c(p1=0.3,x1=0,p2=0.3,x2=0,x3=1)),type="twoStep")
-    ## print(gmm(g5,x,c(p1=0.2,x1=0,p2=0.2,x2=0,p3=0.2,x3=1,p4=0.2,x4=0.2,x5=0.2)),type="twoStep")
+    ## print(gmm(g,x,c(p1=0.5,x1=0,x2=0)))
+    ## print(gmm(g,x,c(p1=0.5,x1=0,x2=0)),type="twoStep")
+    ## print(gmm(g3,x,c(p1=0.3,x1=0,p2=0.3,x2=0,x3=1)),type="twoStep")
+    print(gmm(g5,x,c(p1=0.2,x1=0,p2=0.2,x2=0,p3=0.2,x3=1,p4=0.2,x4=0.2,x5=0.2)),type="twoStep")
     ## print(gmm(g,x,c(p1=0.5,x1=0,x2=0)))
     ## tryCatch(print(gmm(g,x,c(p1=0.5,x1=0,x2=0))), warning=function(w) {
     ##     wcnt <<- wcnt + 1
