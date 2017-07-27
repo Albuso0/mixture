@@ -1,5 +1,5 @@
 import numpy as np
-from functions import *
+from solvers import *
 from discreteRV import * 
 from GM import *
 
@@ -19,29 +19,29 @@ from GM import *
 
 
 
+# print(HermiteMoment([1,1,2,4,10,26,76,232]))
+# print(deconvolution([1,2,4,10,26,76,232]))
 
 
 # U = finiteRV( [1], [0] )
-U = finiteRV( prob=[0.2, 0.5, 0.3], val=[0, 2, 1] )
-print(moment(U,4))
+# U = finiteRV( prob=[0.2, 0.5, 0.3], val=[0, 2, 1] )
+# print(moment(U,4))
 # V = finiteRV( prob=[0.2, 0.5, 0.3], val=[0, 2, 1.2] )
 # print(W1(U,V))
+
 
 n = 10000
 k = 2
 for expN in range(1):
-    # U = finiteRV( prob=[0.5, 0.5], val=[-1, 1] )
-    # U = finiteRV( prob=[1], val=[0] )
-    # x = sampleNoisy(U,n)
-    GM = modelGM( prob=[0.5, 0.5], mean=[-1, 1] )
+    GM = modelGM( prob=[0.5, 0.5], mean=[-1, 10] )
     x = sampleGM(GM, n)
 
     # EM
-    # start = [0.5,-1,0.5,1] # format:[p1,x1,p2,x2....]
-    # pEM = EM(x, start, eps=1e-6, output=False, maxIter=5000)
-    # weights = pEM[0::2]
-    # atoms = pEM[1::2]
-    # print('EM:', weights, atoms,    np.sum(np.dot(weights,np.abs(atoms)))  )
+    start = [0.5,-1,0.5,1] # format:[p1,x1,p2,x2....]
+    pEM = EM(x, start, eps=1e-6, output=False, maxIter=5000)
+    weights = pEM[0::2]
+    atoms = pEM[1::2]
+    print('EM:', weights, atoms,    np.sum(np.dot(weights,np.abs(atoms)))  )
 
 
 
@@ -57,7 +57,7 @@ for expN in range(1):
     print('Ordinary MoM:', weights, atoms, np.sum(np.dot(weights,np.abs(atoms))) )
     
     # Denoised MoM
-    pDMOM = quadrature(projection(m,-1,1))
+    pDMOM = quadrature(projection(m,-2,10))
     weights = pDMOM[0::2]
     atoms = pDMOM[1::2]
     print('Denoised MoM:', weights, atoms, np.sum(np.dot(weights,np.abs(atoms))) )

@@ -23,9 +23,9 @@ def moment(RV, degree=1):
     M = np.zeros(degree)
     monomial = np.ones(RV.x.shape)
 
-    for k in range(degree):
+    for i in range(degree):
         monomial *= RV.x
-        M[k] = np.dot(RV.p, monomial)
+        M[i] = np.dot(RV.p, monomial)
         
     return M
 
