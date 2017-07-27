@@ -10,7 +10,7 @@ class finiteRV:
     p: probabilites
     x: atoms
     """
-    def __init__(self, prob=0, val=0):
+    def __init__(self, prob=[], val=[]):
         self.p = np.asarray(prob)
         self.x = np.asarray(val)
         assert_shape_equal(self.p, self.x)

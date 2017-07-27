@@ -2,6 +2,8 @@ import numpy as np
 import scipy.optimize
 import math
 from discreteRV import finiteRV
+import cvxpy
+import sympy 
 
 
 def empiricalMoment(samples, degree):
@@ -53,7 +55,6 @@ def deconvolution(m):
 
     
 
-import cvxpy
 def projection(moments, a=-1, b=1):
     # input: a sequence of estimated moments, starting from degree 1
     # output: a sequence of valid moments on [a,b], starting from degree 1 (default [a,b]=[-1,1])
@@ -102,12 +103,18 @@ def projection(moments, a=-1, b=1):
 
 
 
-import sympy 
 def mom_symbol(m):
-    """ Symbolic solver for ordinary method of moments
-    input: a sequence of estimated moments, starting from degree 1
-    output format: [p1,x1,p2,x2,...]
+    """ Symbolic solver for ordinary method of moments 
+
+    Args:
+    m: a sequence of estimated moments, starting from degree 1
+       only use odd number of moments
+
+    Returns:
+    U(finiteRV): estimated RV, whose moments is m
+    
     """
+    
     n = len(m)
     if n % 2 == 0:
         n = n-1 # only use 2k-1 moments
@@ -147,9 +154,9 @@ def mom_symbol(m):
     
     
     if (len(s)==0):
-        return []
+        return finiteRV()
     else:
-        return [x for x in s[0]]
+        return finiteRV(prob=s[0][0::2],val=s[0][1::2])
 
     
 # def mom_numeric(m):
@@ -183,16 +190,26 @@ def quadrature(m):
 
 
 
-import math
-def EM(samples, theta0, eps=1e-6, output=False, maxIter=5000):
-    # input: theta0 = [p1,x1,p2,x2...], eps= termination accuracy
-    # if output= True, will print results in each iteration 
-    # output: theta = [p1,x1,p2,x2...]
-    k = int( (len(theta0)+1)/2 )
+def EM(samples, theta0, eps=1e-6, printIter=False, maxIter=5000):
+    """ EM for estimating U under model U+Z
+
+    Args:
+    theta0 (finiteRV): initial estimate
+    eps(float): termination accuracy
+    printIter(bool): print results in each iteration 
+    maxIter(int): maximum iterations
+
+    Returns:
+    theta(finiteRV): estimated model
+    iterN(int): number of iterations
+
+    """
+    
+    k = len(theta0.p)
     n = len(samples)
 
-    curP = np.asarray(theta0[0::2])
-    curX = np.asarray(theta0[1::2])
+    curP = theta0.p
+    curX = theta0.x
     samples = np.asarray(samples)
 
     iterN = 0
@@ -204,7 +221,7 @@ def EM(samples, theta0, eps=1e-6, output=False, maxIter=5000):
         for i in range(n):
             for j in range(k):
                 T[i][j]= preP[j]*math.exp( -((samples[i]-preX[j])**2)/2 )
-            T[i]=np.divide(T[i],sum(T[i]))
+            T[i] /= sum(T[i])
 
         N = np.sum(T,axis=0)
 
@@ -212,11 +229,10 @@ def EM(samples, theta0, eps=1e-6, output=False, maxIter=5000):
         curP = N/np.sum(N)
         curX = np.divide( np.matmul(samples,T), N )
 
-        if output:
+        if printIter:
             print(curP,curX)
 
         if ( iterN > maxIter or np.linalg.norm(np.subtract(curP,preP))+np.linalg.norm(np.subtract(curX,preX))<eps ):
             break
 
-
-    return [x for xs in zip(curP, curX) for x in xs] # format: [p1,x1,p2,x2,...]
+    return finiteRV(curP,curX), iterN

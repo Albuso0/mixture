@@ -37,27 +37,21 @@ for expN in range(1):
     x = sampleGM(GM, n)
 
     # EM
-    start = [0.5,-1,0.5,1] # format:[p1,x1,p2,x2....]
-    pEM = EM(x, start, eps=1e-6, output=False, maxIter=5000)
-    weights = pEM[0::2]
-    atoms = pEM[1::2]
-    print('EM:', weights, atoms,    np.sum(np.dot(weights,np.abs(atoms)))  )
+    start = finiteRV(prob=[0.5,0.5], val=[-1,1])
+    pEM,iterN = EM(x, start, eps=1e-6, printIter=False, maxIter=5000)
+    print('EM:', pEM.p, pEM.x,  W1(pEM,GM.meanRV()) )
 
 
 
-    # raw moments: moments of X=U+Z of degree up to 2k-1
-    rawm = empiricalMoment(x, 2*k-1)
-    # deconvolution: moments of U
-    m = deconvolution(rawm)
+    # estimate moments of U
+    m = deconvolution(empiricalMoment(x, 2*k-1))
 
     # ordinary MoM
     pMOM = mom_symbol(m)
-    weights = pMOM[0::2]
-    atoms = pMOM[1::2]
-    print('Ordinary MoM:', weights, atoms, np.sum(np.dot(weights,np.abs(atoms))) )
+    print('Ordinary MoM:', pMOM.p, pMOM.x, W1(pEM,GM.meanRV()) )
     
     # Denoised MoM
-    pDMOM = quadrature(projection(m,-2,10))
+    pDMOM = quadrature(projection(m,-2,12))
     weights = pDMOM[0::2]
     atoms = pDMOM[1::2]
     print('Denoised MoM:', weights, atoms, np.sum(np.dot(weights,np.abs(atoms))) )

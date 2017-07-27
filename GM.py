@@ -24,10 +24,10 @@ class modelGM:
             self.sigma = np.asarray(std)
         assert_shape_equal(self.p, self.sigma)
 
-    def meanRV():
+    def meanRV(self):
         return finiteRV(self.p,self.mu)
 
-    def stdRV():
+    def stdRV(self):
         return finiteRV(self.p,self.sigma)
 
 
