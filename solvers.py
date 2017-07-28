@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.optimize
 import math
-from discreteRV import finiteRV
+from discreteRV import finiteRV, moment
 import cvxpy
 import sympy
 
@@ -56,9 +56,14 @@ def deconvolution(m):
     
 
 def projection(moments, a=-1, b=1):
-    # input: a sequence of estimated moments, starting from degree 1
-    # output: a sequence of valid moments on [a,b], starting from degree 1 (default [a,b]=[-1,1])
-    # function: project to a valid moment sequence on [a,b]
+    """ project to a valid moment sequence on [a,b]
+
+    Args:
+    a sequence of estimated moments, starting from degree 1
+
+    Returns:
+    a sequence of valid moments on [a,b], starting from degree 1 (default [a,b]=[-1,1])
+    """
     n = len(moments)
     if n == 0:
         return moments
@@ -103,22 +108,21 @@ def projection(moments, a=-1, b=1):
 
 
 
-def mom_symbol(m):
-    """ Symbolic solver for ordinary method of moments 
+def mom_symbol(m, k):
+    """ Symbolic solver for ordinary method of moments - find k-point representative distribution
 
     Args:
     m: a sequence of estimated moments, starting from degree 1
-       only use odd number of moments
+       only use first 2k-1 moments
+    k: number of atoms in the output RV
 
     Returns:
-    U(finiteRV): estimated RV, whose moments is m
+    U(finiteRV): estimated RV, whose first 2k-1 moments equal m
     
     """
     
-    n = len(m)
-    if n % 2 == 0:
-        n = n-1 # only use 2k-1 moments
-    k = int((n+1)/2)
+    n = 2*k-1
+    assert len(m)>=n
     
     p = sympy.symbols('p0:%d'%(k), nonnegative=True, real=True);
     x = sympy.symbols('x0:%d'%(k), real=True);
@@ -152,22 +156,41 @@ def mom_symbol(m):
     # testEq = [x[0]*p[0] - 2*p[0], 2*p[0]**2 - x[0]**2]
     # s = solve_triangulated(testEq, x[0], p[0])
     
-    
     if (len(s)==0):
         return finiteRV()
     else:
         return finiteRV(prob=s[0][0::2],val=s[0][1::2])
 
+
     
-# def mom_numeric(m):
-#     def equation(measure):
-#         return(np.subtract(moment(measure, 3), m))
+def mom_numeric(m, start):
+    """ numerical solver for ordinary method of moments - find k-point representative distribution
+
+    Args:
+    m: a sequence of estimated moments, starting from degree 1
+       only use first 2k-1 moments
+    start: initial guess. k = the number of components in start.
+
+    Returns:
+    U(finiteRV): estimated RV
     
-#     x0 = [0.5,3,0.5,1]
-#     # x = scipy.optimize.fsolve(equation, x0)
-#     x = scipy.optimize.broyden2(equation, x0)
-#     print(x)
-#     print(equation(x))
+    """
+    k = len(start.p)
+    n = 2*k-1
+    assert len(m)>=n
+    m = m[0:n]
+    
+    def equation(x):
+        return moment(finiteRV(val=x[0:k],prob=np.append(x[k:],1-np.sum(x[k:]))),n)-m
+
+    x0 = np.concatenate( (start.x, start.p[0:-1]) )
+    x = scipy.optimize.fsolve(equation, x0)
+    # x = scipy.optimize.broyden2(equation, x0)
+    
+    return finiteRV(val=x[0:k],prob=np.append(x[k:],1-np.sum(x[k:])))
+
+
+
 
 
 def quadmom(m):
@@ -244,7 +267,7 @@ def EM(samples, theta0, eps=1e-6, printIter=False, maxIter=5000):
         for i in range(n):
             for j in range(k):
                 T[i][j]= preP[j]*math.exp( -((samples[i]-preX[j])**2)/2 )
-            T[i] /= sum(T[i])
+            T[i] /= np.sum(T[i])
 
         N = np.sum(T,axis=0)
 

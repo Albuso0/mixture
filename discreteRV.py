@@ -34,6 +34,9 @@ def moment(RV, degree=1):
 def W1(U,V):
     """ compute W1 distance between finiteRVs U and V
     """
+    if len(U.x)==0 or len(V.x)==0:
+        return 0.
+    
     x1, p1 = zip(*sorted(zip(U.x, U.p)))
     x2, p2 = zip(*sorted(zip(V.x, V.p)))
     l1,l2,diffCDF,dist,pre = 0,0,0.,0.,0.
