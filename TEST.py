@@ -11,7 +11,7 @@ k = 2
 start = finiteRV(prob=1./k * np.ones(k), val=np.arange(k)/(k-1)) 
 
 
-for expN in range(1):
+for expN in range(0):
     GM = modelGM( prob=[0.6, 0.4], mean=[-1, 2] )
     # GM = modelGM( prob=[1], mean=[0.4] )
     x = sampleGM(GM, n)
@@ -56,8 +56,8 @@ for expN in range(1):
 
 
 # U = finiteRV( [1], [0] )
-# U = finiteRV( prob=[0.2, 0.5, 0.3], val=[0, 2, 1] )
-# print(moment(U,4))
+U = finiteRV( prob=[0.2, 0.5, 0.3], val=[3, 2, 1] )
+print(moment(U,4))
 # V = finiteRV( prob=[0.2, 0.5, 0.3], val=[0, 2, 1.2] )
 # print(W1(U,V))
 
