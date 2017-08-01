@@ -8,24 +8,25 @@ printGM <- function(GM) {
     k <- as.integer( (l+1)/2 )
     x <- GM$coefficients[1:k]
     p <- GM$coefficients[(k+1):l]
-    cat(x,p,1-sum(p),"\n",sep="\t")
+    cat(x,p,1-sum(p),"\n",sep=" ")
 }
 
 
-sample <- (1:5)*100
+sample <- (1:100)*1000
 rep <- 20
 
 cat("Model: (x1,x2,...,p1,p2,...)\n")
-model.x = c(-1,1)
-model.p = c(1./2,1./2)
-cat(model.x,model.p,"\n",sep="\t")
+model.x = c(-0,0,0)
+model.p = c(1./3, 1./3, 1./3)
+cat(model.x,model.p,"\n",sep=" ")
 
 
 cat("Estimate: (x1,x2,...,p1,p2,...)\n")
-g <- g2 ## gk: k-component
-initial = c(x1=-1,x2=1,p1=0.5) ## initial guess
+g <- g3 ## gk: k-component
+initial = c(x1=-0,x2=0,x3=0,p1=1./3,p2=1./3) ## initial guess
 ## c(x1=0,x2=0,x3=1,p1=0.3,p2=0.3)
 ## c(x1=0,x2=0,x3=1,x4=1,p1=0.25,p2=0.25,p3=0.25)
+
 
 for (j in 1:length(sample)){
     n <- sample[j]
@@ -35,7 +36,8 @@ for (j in 1:length(sample)){
         z <- rnorm(n, mean = 0, sd = 1)
         x <- u+z
 
-        GM <- gmm(g2,x,initial)
+        GM <- gmm(g,x,initial)
+        ## GM <- gmm(g3,x,c(x1=-1,x2=0,x3=1,p1=1./3,p2=1./3))
         printGM(GM)
         ## print(gmm(g,x,c(p1=0.5,x1=0,x2=0)),type="twoStep")
 

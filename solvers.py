@@ -236,12 +236,31 @@ def quadmom(m):
 
 
 
-def EM(samples, theta0, eps=1e-6, printIter=False, maxIter=5000):
+
+def LL(samples, means):
+    """
+    Log-likelihood of samples under the given means
+    
+    Args:
+    samples: array
+    means: array
+
+    Return:
+    LL: log-likelihood, shape(len(samples), len(means))
+    """
+
+    samples = np.asarray(samples)
+    means = np.asarray(means)
+    
+    LL0 = means**2 - 2 * np.outer(samples, means) + (samples**2)[:, np.newaxis]
+    return -0.5*(np.log(2*np.pi)+LL0)
+
+def EM(samples, theta0, tol=1e-3, printIter=False, maxIter=100):
     """ EM for estimating U under model U+Z
 
     Args:
     theta0 (finiteRV): initial estimate
-    eps(float): termination accuracy
+    tol(float): termination accuracy
     printIter(bool): print results in each iteration 
     maxIter(int): maximum iterations
 
@@ -253,32 +272,33 @@ def EM(samples, theta0, eps=1e-6, printIter=False, maxIter=5000):
     
     k = len(theta0.p)
     n = len(samples)
-
-    curP = theta0.p
-    curX = theta0.x
     samples = np.asarray(samples)
 
     iterN = 0
-    while(True):
-        preP = curP
-        preX = curX
+    curP = theta0.p
+    curX = theta0.x
+    LLmat = LL(samples, curX)
+    curLL = np.sum( np.log( np.dot(np.exp(LLmat), curP) ))
 
-        T = np.zeros((n,k))
-        for i in range(n):
-            for j in range(k):
-                T[i][j]= preP[j]*math.exp( -((samples[i]-preX[j])**2)/2 )
-            T[i] /= np.sum(T[i])
+    while(True):
+        preLL = curLL
+        
+        T = np.exp(LLmat) * curP
+        T /= np.sum(T,axis=1)[:, np.newaxis]
 
         N = np.sum(T,axis=0)
 
         iterN += 1
         curP = N/np.sum(N)
         curX = np.divide( np.matmul(samples,T), N )
+        LLmat = LL(samples, curX)
+        curLL = np.sum( np.log( np.dot(np.exp(LLmat), curP) ))
 
         if printIter:
             print(curP,curX)
+            print(curLL)
 
-        if ( iterN > maxIter or np.linalg.norm(np.subtract(curP,preP))+np.linalg.norm(np.subtract(curX,preX))<eps ):
+        if ( iterN > maxIter or np.abs(preLL-curLL)<tol ):
             break
 
     return finiteRV(curP,curX), iterN
