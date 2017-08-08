@@ -81,7 +81,7 @@ def projection(moments, a=-1, b=1):
         # odd case
         k = int((n+1)/2)
         H = cvxpy.Variable(k,k+1)
-        constraints = [H[:,1:]>>a*H[:,:k], b*H[:,:k]>>H[:,1:]]
+        constraints = [H[:,1:]-a*H[:,:k]>>0, b*H[:,:k]-H[:,1:]>>0]
         for i in range(k):
             for j in range(k+1):
                 if i==0 and j==0:
@@ -92,7 +92,7 @@ def projection(moments, a=-1, b=1):
         # even case
         k = int(n/2)+1
         H = cvxpy.Variable(k,k)
-        constraints = [H>>0, (a+b)*H[:k-1,1:]>>a*b*H[:k-1,:k-1]+H[1:,1:]]
+        constraints = [H>>0, (a+b)*H[:k-1,1:]-a*b*H[:k-1,:k-1]+H[1:,1:]>>0]
         for i in range(k):
             for j in range(k):
                 if i==0 and j==0:
@@ -102,7 +102,8 @@ def projection(moments, a=-1, b=1):
                     
     
     prob = cvxpy.Problem(obj, constraints)
-    opt = prob.solve(solver=cvxpy.CVXOPT,abstol=1e-10)
+    opt = prob.solve(solver=cvxpy.CVXOPT)
+
     
     return x.value.T.A1
 
@@ -193,7 +194,7 @@ def mom_numeric(m, start):
 
 
 
-def quadmom(m):
+def quadmom(m, dettol=0):
     """ compute quadrature from moments
     ref: Gene Golub, John Welsch, Calculation of Gaussian Quadrature Rules
 
@@ -205,14 +206,25 @@ def quadmom(m):
     """
 
     m = np.asarray(m)
-    ## TODO: check positive definite and decide to use how many moments
+    # INF = float('inf')
+    INF = 1e10
+
+    
     if len(m) % 2 == 1:
-        m = np.append(m,1e10)
+        m = np.append(m,INF)
     n = int(len(m)/2)
     m = np.insert(m,0,1)
 
 
     h = scipy.linalg.hankel(m[:n+1:], m[n::]) # Hankel matrix
+    for i in range(len(h)):
+        # check positive definite and decide to use how many moments
+        if np.linalg.det(h[0:i+1,0:i+1])<dettol: # alternative: less than some threshold
+            h = h[0:i+1,0:i+1]
+            h[i,i] = INF
+            n = i
+            break
+    
     r = np.transpose(np.linalg.cholesky(h)) # upper triangular Cholesky factor
 
     # Compute alpha and beta from r, using Golub and Welsch's formula.
@@ -237,9 +249,9 @@ def quadmom(m):
 
 
 
-def LL(samples, means):
+def LLmatrix(samples, means):
     """
-    Log-likelihood of samples under the given means
+    Log-likelihood matrix of samples under the given means
     
     Args:
     samples: array
@@ -254,6 +266,22 @@ def LL(samples, means):
     
     LL0 = means**2 - 2 * np.outer(samples, means) + (samples**2)[:, np.newaxis]
     return -0.5*(np.log(2*np.pi)+LL0)
+
+
+def LL(samples, U):
+    """
+    Log-likelihood matrix of samples under the given means
+    
+    Args:
+    samples: array
+    means: array
+
+    Return:
+    LL: log-likelihood, shape(len(samples), len(means))
+    """
+    return np.sum( np.log( np.dot(np.exp(LLmatrix(samples,U.x)), U.p) ))
+
+
 
 def EM(samples, theta0, tol=1e-3, printIter=False, maxIter=100):
     """ EM for estimating U under model U+Z
@@ -277,7 +305,7 @@ def EM(samples, theta0, tol=1e-3, printIter=False, maxIter=100):
     iterN = 0
     curP = theta0.p
     curX = theta0.x
-    LLmat = LL(samples, curX)
+    LLmat = LLmatrix(samples, curX)
     curLL = np.sum( np.log( np.dot(np.exp(LLmat), curP) ))
 
     while(True):
@@ -291,14 +319,14 @@ def EM(samples, theta0, tol=1e-3, printIter=False, maxIter=100):
         iterN += 1
         curP = N/np.sum(N)
         curX = np.divide( np.matmul(samples,T), N )
-        LLmat = LL(samples, curX)
+        LLmat = LLmatrix(samples, curX)
         curLL = np.sum( np.log( np.dot(np.exp(LLmat), curP) ))
 
         if printIter:
             print(curP,curX)
             print(curLL)
 
-        if ( iterN > maxIter or np.abs(preLL-curLL)<tol ):
+        if ( iterN > maxIter or curLL-preLL<tol ):
             break
 
     return finiteRV(curP,curX), iterN

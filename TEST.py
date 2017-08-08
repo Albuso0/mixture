@@ -4,36 +4,68 @@ from discreteRV import *
 from GM import *
 
 
+import sys
+import time
+
+k = 5
+
+# for i in range(20):
+#     print("Model ",i+1)
+#     print("p= ",' '.join( map(str,np.random.dirichlet(np.ones(k)))))
+#     print("x= ",' '.join( map(str,np.random.uniform(-1,1,k))))
+# exit()
+
+with open('result2/Models.txt') as f:
+    models = f.readlines()
+
+model = int(sys.argv[1])
+## fetch model
+print("Model: ")
+GM = modelGM(prob = np.array(models[(model-1)*3+1].split()[1:]).astype(np.float), mean = np.array(models[(model-1)*3+2].split()[1:]).astype(np.float))
+# GM = modelGM( prob= np.random.dirichlet(np.ones(k)), mean=np.random.uniform(-1,1,k) )
+print('p= ', ' '.join( map(str, GM.p)))
+print('x= ', ' '.join( map(str, GM.mu)))
+print('moments: ',' '.join( map(str,moment(GM.meanRV(),2*k-1))))
 
 
 
-sample = np.arange(1,101)*100
 rep = 20
-k = 3
+sample = (1+np.arange(10))*(500)
 
-
-print("Model: (x1,x2,...,p1,p2,...)")
-GM = modelGM( prob=[1./3, 1./3, 1./3], mean=[-0, 0, 0] )
-print(' '.join( map(str,np.concatenate((GM.mu,GM.p)))))
-# cat(model.x,model.p,"\n",sep="\t")
-
-start = finiteRV(prob=[1./3, 1./3, 1./3], val=[-0.1, 0, 0.1]) 
-
-print("Estimate: (x1,x2,...,p1,p2,...)")
+print("Estimate: ")
 for n in sample:
-    print('n= ',n)
+    print('n= ', n)
+    start_time = time.time()
     for i in range(rep):
         x = sampleGM(GM, n)
 
         #### EM
-        emRV,iterN = EM(x, start, tol=1e-3, printIter=False, maxIter=100)
-        print(' '.join( map(str,np.concatenate((emRV.x,emRV.p)))))
+        # maxLL = float('-inf')
+        # for rdCount in range(5):
+        #     start = finiteRV(prob=np.random.dirichlet(np.ones(k)), val=np.random.uniform(-1,1,k))
+        #     emRVcand,iterNcand = EM(x, start, tol=1e-3, printIter=False, maxIter=5000)
+        #     curLL = LL(x,emRVcand)
+        #     if curLL > maxLL:
+        #         iterN = iterNcand
+        #         emRV = emRVcand
+        #         maxLL = curLL
+        # print('p= ', ' '.join(map(str,emRV.p)))
+        # print('x= ', ' '.join(map(str,emRV.x)))
+        # print('iter: ', iterN)
         
 
         #### DMOM
-        # m = deconvolution(empiricalMoment(x, 2*k-1))
-        # dmomRV = quadmom(projection(m,-10,10))
-        # print(' '.join( map(str,np.concatenate((dmomRV.x,dmomRV.p)))))
+        m = deconvolution(empiricalMoment(x, 2*k-1))
+        proj = projection(m,-20,20)
+        print('moments: ', ' '.join(map(str,m)))
+        print('projected: ',' '.join(map(str,proj)))
+        dmomRV = quadmom(proj,dettol=0)
+        print('p= ', ' '.join(map(str,dmomRV.p)))
+        print('x= ', ' '.join(map(str,dmomRV.x)))
+        
+    print("Time: %s seconds" % (time.time() - start_time))
+
+
 
 
 
