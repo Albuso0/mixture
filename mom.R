@@ -14,36 +14,44 @@ printGM <- function(GM) {
     ## cat(x,p,1-sum(p),"\n",sep=" ")
 }
 
-models <- read.table("result2/Models.tab")
-models[1] <- NULL
 
-args <- commandArgs(TRUE)
-model <- as.integer(args[1])
+k <- 4
+g <- g4 ## gk: k-component
 
-## model = 5
+#### inequality constraints in k=5
+## ui = rbind(c(0,0,0,0,0,1,0,0,0),
+##            c(0,0,0,0,0,-1,0,0,0),
+##            c(0,0,0,0,0,0,1,0,0),
+##            c(0,0,0,0,0,0,-1,0,0),
+##            c(0,0,0,0,0,0,0,1,0),
+##            c(0,0,0,0,0,0,0,-1,0),
+##            c(0,0,0,0,0,0,0,0,1),
+##            c(0,0,0,0,0,0,0,0,-1),
+##            c(0,0,0,0,0,-1,-1,-1,-1))
+## ci = c(0,-1,0,-1,0,-1,0,-1,-1)
 
-k <- 5
+#### inequality constraints in k=4
+ui = rbind(c(0,0,0,0,1,0,0),
+           c(0,0,0,0,-1,0,0),
+           c(0,0,0,0,0,1,0),
+           c(0,0,0,0,0,-1,0),
+           c(0,0,0,0,0,0,1),
+           c(0,0,0,0,0,0,-1),
+           c(0,0,0,0,-1,-1,-1))
+ci = c(0,-1,0,-1,0,-1,-1)
 
-cat("Model: \n")
-## model.p = rdirichlet(1, rep(1,k))
-## model.x = runif(k, min = -1, max = 1)
-## model.x = c(-5,0,5)
-## model.p = c(1./3, 1./3, 1./3)
-model.p = unlist(models[2*model-1,], use.names=FALSE)
-model.x = unlist(models[2*model,], use.names=FALSE)
-cat("p= ", model.p, "\n", sep=" ")
-cat("x= ", model.x, "\n", sep=" ")
+## cat("Model: \n")
+model.p = c(1.)
+model.x = c(0.)
+## cat("p= ", model.p, "\n", sep=" ")
+## cat("x= ", model.x, "\n", sep=" ")
 
 
 sample <- (1:10)*500
 rep <- 20
-g <- g5 ## gk: k-component
 
 
 cat("Estimate: \n")
-## initial = c(x1=-1,x2=0,x3=1,x4=3,x5=2,p1=1./5,p2=1./5,p3=1./5,p4=1./5) ## initial guess (x_1,..x_k,p1,...p_{k-1})
-## c(x1=0,x2=0,x3=1,p1=0.3,p2=0.3)
-## c(x1=0,x2=0,x3=1,x4=1,p1=0.25,p2=0.25,p3=0.25)
 
 
 for (j in 1:length(sample)){
@@ -66,18 +74,8 @@ for (j in 1:length(sample)){
 
             init.p = rdirichlet(1, rep(1,k))
             init.x = runif(k, min = -1, max = 1)
-            initial = c(init.x, init.p[1:4])
-            GMcand <- gmm(g,x,initial,optfct="constrOptim",
-                      ui = rbind(c(0,0,0,0,0,1,0,0,0),
-                                 c(0,0,0,0,0,-1,0,0,0),
-                                 c(0,0,0,0,0,0,1,0,0),
-                                 c(0,0,0,0,0,0,-1,0,0),
-                                 c(0,0,0,0,0,0,0,1,0),
-                                 c(0,0,0,0,0,0,0,-1,0),
-                                 c(0,0,0,0,0,0,0,0,1),
-                                 c(0,0,0,0,0,0,0,0,-1),
-                                 c(0,0,0,0,0,-1,-1,-1,-1)),
-                      ci = c(0,-1,0,-1,0,-1,0,-1,-1) )
+            initial = c(init.x, init.p[1:k-1])
+            GMcand <- gmm(g,x,initial,optfct="constrOptim",ui=ui,ci=ci)
             if (GMcand$objective < best) {
                 GM <- GMcand
                 best = GMcand$objective
