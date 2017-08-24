@@ -5,34 +5,40 @@ from GM import *
 
 
 
-k = 4
+m = [0,2,0.00,15]
+m, sigma2 = estimate_sigma(m)
+print(m,sigma2)
+U = quadmom(m)
+print(U.p, U.x)
+
+# k = 4
 
 
-GM = modelGM(prob = [1], mean = [0])
+# GM = modelGM(prob = [1], mean = [0])
 
 
-rep = 20
-sample = (1+np.arange(10))*(500)
+# rep = 20
+# sample = (1+np.arange(10))*(500)
 
-print("Estimate: ")
-for n in sample:
-    print('n= ', n)
-    for i in range(rep):
-        x = sampleGM(GM, n)
+# print("Estimate: ")
+# for n in sample:
+#     print('n= ', n)
+#     for i in range(rep):
+#         x = sampleGM(GM, n)
 
-        #### EM
-        maxLL = float('-inf')
-        for rdCount in range(5):
-            start = finiteRV(prob=np.random.dirichlet(np.ones(k)), val=np.random.uniform(-1,1,k))
-            emRVcand,iterNcand = EM(x, start, tol=1e-3, printIter=False, maxIter=5000)
-            curLL = LL(x,emRVcand)
-            if curLL > maxLL:
-                iterN = iterNcand
-                emRV = emRVcand
-                maxLL = curLL
-        print('p= ', ' '.join(map(str,emRV.p)))
-        print('x= ', ' '.join(map(str,emRV.x)))
-        print('iter: ', iterN)
+#         #### EM
+#         maxLL = float('-inf')
+#         for rdCount in range(5):
+#             start = finiteRV(prob=np.random.dirichlet(np.ones(k)), val=np.random.uniform(-1,1,k))
+#             emRVcand,iterNcand = EM(x, start, tol=1e-3, printIter=False, maxIter=5000)
+#             curLL = LL(x,emRVcand)
+#             if curLL > maxLL:
+#                 iterN = iterNcand
+#                 emRV = emRVcand
+#                 maxLL = curLL
+#         print('p= ', ' '.join(map(str,emRV.p)))
+#         print('x= ', ' '.join(map(str,emRV.x)))
+#         print('iter: ', iterN)
         
 
         #### DMOM

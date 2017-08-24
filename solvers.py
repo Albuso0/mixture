@@ -4,6 +4,53 @@ import math
 from discreteRV import finiteRV, moment
 import cvxpy
 import sympy
+from scipy.linalg import hankel
+
+def estimate_sigma(m):
+    """ Lindsay's estimator, fit moments with U+sigma Z. Compute common sigma, and moments of U
+    """
+    
+    if len(m) % 2 == 1:
+        m = np.asarray(m[:-1])
+    else:
+        m = np.asarray(m)
+    m = np.insert(m,0,1)
+
+    l = len(m)
+    HMom = [0]*l
+    x = sympy.symbols('x', nonnegative=True, real=True); # x = sigma^2
+    
+    if ( l > 0 ):
+        pp = np.zeros(m.shape); pp[0]=1
+        HMom[0] = m[0]
+    if ( l > 1 ):
+        p = np.zeros(m.shape); p[1]=1
+        HMom[1] = m[1]
+    for k in range(2,l):
+        # recursion: H_{n+1}(x) = x * H_n(x) - n * H_{n-1}(x)
+        coeffs = np.roll(p, 1) - pp*(k-1)*x
+        for i in range(k+1):
+            HMom[k]+= coeffs[i]*m[i]
+        # HMom[k] = np.dot(m, coeffs)
+        pp = p; p = coeffs
+
+    # Solve the first non-negative root
+    H = hankel(HMom[:int((l+1)/2)],HMom[int((l-1)/2):])
+    eq = sympy.Matrix(H).det()
+    root = sympy.solve(eq,x)
+    root.sort()
+    x0 = root[0]
+
+    for k in range(2,l):
+        HMom[k] = float(HMom[k].subs(x,x0))
+
+    return (np.asarray(HMom[1:]), float(x0))
+    # HMom = [expr.subs(x,x0) for expr in HMom]
+    # print(HMom)
+
+    
+
+    
 
 
 def empiricalMoment(samples, degree):
@@ -219,12 +266,11 @@ def quadmom(m, dettol=0):
     h = scipy.linalg.hankel(m[:n+1:], m[n::]) # Hankel matrix
     for i in range(len(h)):
         # check positive definite and decide to use how many moments
-        if np.linalg.det(h[0:i+1,0:i+1])<dettol: # alternative: less than some threshold
+        if np.linalg.det(h[0:i+1,0:i+1])<=dettol: # alternative: less than some threshold
             h = h[0:i+1,0:i+1]
             h[i,i] = INF
             n = i
             break
-    
     r = np.transpose(np.linalg.cholesky(h)) # upper triangular Cholesky factor
 
     # Compute alpha and beta from r, using Golub and Welsch's formula.
