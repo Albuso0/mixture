@@ -8,6 +8,14 @@ g2 <- function(u,x) { # u = x1,x2,p1
     f <- cbind(g1,g2,g3)
     return(f)
 }
+#### inequality constraints in k=2: ui*u >= ci
+ui2 = rbind(c(0,0,1),
+           c(0,0,-1))
+ci2 = c(0,-1)
+
+
+
+
 
 ##### k=3
 g3 <- function(u,x) { # u = x1,x2,x3,p1,p2
@@ -19,6 +27,15 @@ g3 <- function(u,x) { # u = x1,x2,x3,p1,p2
     f <- cbind(f1,f2,f3,f4,f5)
     return(f)
 }
+#### inequality constraints in k=3: ui*u >= ci
+ui3 = rbind(c(0,0,0,1,0),
+           c(0,0,0,-1,0),
+           c(0,0,0,0,1),
+           c(0,0,0,0,-1),
+           c(0,0,0,-1,-1))
+ci3 = c(0,-1,0,-1,-1)
+
+
 
 
 ##### k=4
@@ -33,6 +50,16 @@ g4 <- function(u,x) { # u = x1,x2,x3,x4,p1,p2,p3
     f <- cbind(f1,f2,f3,f4,f5,f6,f7)
     return(f)
 }
+#### inequality constraints in k=4: ui*u >= ci
+ui4 = rbind(c(0,0,0,0,1,0,0),
+           c(0,0,0,0,-1,0,0),
+           c(0,0,0,0,0,1,0),
+           c(0,0,0,0,0,-1,0),
+           c(0,0,0,0,0,0,1),
+           c(0,0,0,0,0,0,-1),
+           c(0,0,0,0,-1,-1,-1))
+ci4 = c(0,-1,0,-1,0,-1,-1)
+
 
 
 ##### k=5
@@ -49,6 +76,17 @@ g5 <- function(u,x) { # u = x1,x2,x3,x4,x5,p1,p2,p3
     f <- cbind(f1,f2,f3,f4,f5,f6,f7,f8,f9)
     return(f)
 }
+#### inequality constraints in k=5: ui*u >= ci
+ui5 = rbind(c(0,0,0,0,0,1,0,0,0),
+           c(0,0,0,0,0,-1,0,0,0),
+           c(0,0,0,0,0,0,1,0,0),
+           c(0,0,0,0,0,0,-1,0,0),
+           c(0,0,0,0,0,0,0,1,0),
+           c(0,0,0,0,0,0,0,-1,0),
+           c(0,0,0,0,0,0,0,0,1),
+           c(0,0,0,0,0,0,0,0,-1),
+           c(0,0,0,0,0,-1,-1,-1,-1))
+ci5 = c(0,-1,0,-1,0,-1,0,-1,-1)
 
 
 

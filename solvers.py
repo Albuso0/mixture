@@ -29,6 +29,7 @@ def estimate_sigma(m):
     for k in range(2,l):
         # recursion: H_{n+1}(x) = x * H_n(x) - n * H_{n-1}(x)
         coeffs = np.roll(p, 1) - pp*(k-1)*x
+        # print(coeffs)
         for i in range(k+1):
             HMom[k]+= coeffs[i]*m[i]
         # HMom[k] = np.dot(m, coeffs)
@@ -37,17 +38,19 @@ def estimate_sigma(m):
     # Solve the first non-negative root
     H = hankel(HMom[:int((l+1)/2)],HMom[int((l-1)/2):])
     eq = sympy.Matrix(H).det()
-    root = sympy.solve(eq,x)
+    # print(eq)
+    coeffs = sympy.Poly(eq, x).coeffs()
+    root = np.roots(coeffs)
+    root = root[np.isreal(root)].real
+    # root = sympy.solve(eq,x)
     root.sort()
+    # print(root)
     x0 = root[0]
 
     for k in range(2,l):
         HMom[k] = float(HMom[k].subs(x,x0))
 
     return (np.asarray(HMom[1:]), float(x0))
-    # HMom = [expr.subs(x,x0) for expr in HMom]
-    # print(HMom)
-
     
 
     

@@ -5,17 +5,27 @@ from GM import *
 
 
 
-m = [0,2,0.00,15]
-m, sigma2 = estimate_sigma(m)
-print(m,sigma2)
-U = quadmom(m)
-print(U.p, U.x)
+# m = [0,2,0.00,15]
+# m, sigma2 = estimate_sigma(m)
+# print(m,sigma2)
+# U = quadmom(m)
+# print(U.p, U.x)
+
 
 # k = 4
 
 
-# GM = modelGM(prob = [1], mean = [0])
-
+GM = modelGM(prob = [0.5,0.5], mean = [0,0], std = [1,np.sqrt(3)])
+# GM = modelGM(prob = [0.5,0.5], mean = [0,1], std = 0.5)
+x = sampleGM(GM, 1000000)
+k = 2
+m = empiricalMoment(x, 2*k)
+m, sigma2 = estimate_sigma(m)
+U = quadmom(m)
+print('p= ', ' '.join(map(str,U.p)))
+print('x= ', ' '.join(map(str,U.x)))
+print('sigma= ', np.sqrt(sigma2))
+print('sigma2= ', sigma2)
 
 # rep = 20
 # sample = (1+np.arange(10))*(500)
