@@ -18,32 +18,27 @@ def estimate_sigma(m):
 
     l = len(m)
     HMom = [0]*l
-    x = sympy.symbols('x', nonnegative=True, real=True); # x = sigma^2
+    x = np.poly1d([1, 0]) # x = sigma^2
     
-    if ( l > 0 ):
+    if l>0:
         pp = np.zeros(m.shape); pp[0]=1
         HMom[0] = m[0]
-    if ( l > 1 ):
+    if l>1:
         p = np.zeros(m.shape); p[1]=1
         HMom[1] = m[1]
     for k in range(2,l):
         # recursion: H_{n+1}(x) = x * H_n(x) - n * H_{n-1}(x)
-        coeffs = np.roll(p, 1) - pp*(k-1)*x
-        # print(coeffs)
+        coeffs = np.roll(p, 1) - pp*(k-1)
         for i in range(k+1):
-            HMom[k]+= coeffs[i]*m[i]
-        # HMom[k] = np.dot(m, coeffs)
+            HMom[k] += float(coeffs[i]*m[i])*(x**(int((k-i)/2)))
         pp = p; p = coeffs
 
+
     # Solve the first non-negative root
-    # print(HMom)
-    H = hankel(HMom[:int((l+1)/2)],HMom[int((l-1)/2):])
-    eq = determinant(H).as_poly()
-    # print(eq)
+    H = get_Hankel(HMom)
+    eq = determinant(H)
     
-    coeffs = eq.coeffs()
-    root = np.roots(coeffs)
-    # root = sympy.solve(eq,x)
+    root = eq.r
     root = root[np.isreal(root)].real
     root = root[root>=0]
     root.sort()
@@ -51,14 +46,23 @@ def estimate_sigma(m):
     x0 = root[0]
 
     for k in range(2,l):
-        HMom[k] = float(HMom[k].subs(x,x0))
+        HMom[k] = HMom[k](x0)
 
     return (np.asarray(HMom[1:]), float(x0))
     
+def get_Hankel(m):
+    # length of m = 2k-1
+    k = int((len(m)+1)/2)
+    matrix = [[0]*k for i in range(k)]
+    for i in range(k):
+        for j in range(k):
+            matrix[i][j] = m[i+j]
 
+    return matrix
+    
 def determinant(M,r=[],c=[]):
     if len(r)==0:
-        rows, cols = M.shape
+        rows, cols = len(M), len(M[0])
         r = list(range(rows))
         c = list(range(cols))
         
@@ -67,19 +71,19 @@ def determinant(M,r=[],c=[]):
     assert rows == cols
 
     if rows == 1:
-        return M[r[0], c[0]]
-    elif rows == 2:
-        return M[r[0], c[0]]*M[r[1], c[1]] - M[r[0], c[1]]*M[r[1], c[0]]
-    elif rows == 3:
-        return (M[r[0], c[0]]*M[r[1], c[1]]*M[r[2], c[2]] + M[r[0], c[1]]*M[r[1], c[2]]*M[r[2], c[0]] + M[r[0], c[2]]*M[r[1], c[0]]*M[r[2], c[1]]) - \
-               (M[r[0], c[2]]*M[r[1], c[1]]*M[r[2], c[0]] + M[r[0], c[0]]*M[r[1], c[2]]*M[r[2], c[1]] + M[r[0], c[1]]*M[r[1], c[0]]*M[r[2], c[2]])
+        return M[r[0]][c[0]]
+    # elif rows == 2:
+    #     return M[r[0]][c[0]]*M[r[1]][c[1]] - M[r[0]][c[1]]*M[r[1]][c[0]]
+    # elif rows == 3:
+    #     return (M[r[0]][c[0]]*M[r[1]][c[1]]*M[r[2]][c[2]] + M[r[0]][c[1]]*M[r[1]][c[2]]*M[r[2]][c[0]] + M[r[0]][c[2]]*M[r[1]][c[0]]*M[r[2]][c[1]]) - \
+    #            (M[r[0]][c[2]]*M[r[1]][c[1]]*M[r[2]][c[0]] + M[r[0]][c[0]]*M[r[1]][c[2]]*M[r[2]][c[1]] + M[r[0]][c[1]]*M[r[1]][c[0]]*M[r[2]][c[2]])
     else:
         det = 0
         newr = r[1:]
         sign = 1
         for k in range(cols):
             newc = c[:k] + c[(k + 1):]
-            det += determinant(M,newr,newc)*M[r[0],c[k]]*sign
+            det += determinant(M,newr,newc)*M[r[0]][c[k]]*sign
             sign *= -1
         return det
     

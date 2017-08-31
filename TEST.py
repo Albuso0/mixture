@@ -5,6 +5,34 @@ from GM import *
 import time
 
 
+k = 3
+GM = modelGM(prob = [1.], mean = [0.], std = 1)
+
+
+rep = 20
+sample = (1+np.arange(10))*(500)
+
+
+print("Estimate: ")
+for n in sample:
+    print('n= ', n)
+    start_time = time.time()
+    for i in range(rep):
+        np.random.seed(i)
+        x = sampleGM(GM, n)
+        
+        #### Lindsay
+        m = empiricalMoment(x, 2*k)
+        # print('Sample moments= ', m)
+        m, sigma2 = estimate_sigma(m)
+        U = quadmom(m)
+        print('p= ', ' '.join(map(str,U.p)))
+        print('x= ', ' '.join(map(str,U.x)))
+        print('sigma= ', np.sqrt(sigma2))
+exit()
+
+
+
 n=10
 
 samples = np.arange(n)/n
