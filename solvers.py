@@ -36,13 +36,16 @@ def estimate_sigma(m):
         pp = p; p = coeffs
 
     # Solve the first non-negative root
+    # print(HMom)
     H = hankel(HMom[:int((l+1)/2)],HMom[int((l-1)/2):])
-    eq = sympy.Matrix(H).det()
+    eq = determinant(H).as_poly()
     # print(eq)
-    coeffs = sympy.Poly(eq, x).coeffs()
+    
+    coeffs = eq.coeffs()
     root = np.roots(coeffs)
-    root = root[np.isreal(root)].real
     # root = sympy.solve(eq,x)
+    root = root[np.isreal(root)].real
+    root = root[root>=0]
     root.sort()
     # print(root)
     x0 = root[0]
@@ -53,6 +56,45 @@ def estimate_sigma(m):
     return (np.asarray(HMom[1:]), float(x0))
     
 
+def determinant(M,r=[],c=[]):
+    if len(r)==0:
+        rows, cols = M.shape
+        r = list(range(rows))
+        c = list(range(cols))
+        
+    rows = len(r)
+    cols = len(c)
+    assert rows == cols
+
+    if rows == 1:
+        return M[r[0], c[0]]
+    elif rows == 2:
+        return M[r[0], c[0]]*M[r[1], c[1]] - M[r[0], c[1]]*M[r[1], c[0]]
+    elif rows == 3:
+        return (M[r[0], c[0]]*M[r[1], c[1]]*M[r[2], c[2]] + M[r[0], c[1]]*M[r[1], c[2]]*M[r[2], c[0]] + M[r[0], c[2]]*M[r[1], c[0]]*M[r[2], c[1]]) - \
+               (M[r[0], c[2]]*M[r[1], c[1]]*M[r[2], c[0]] + M[r[0], c[0]]*M[r[1], c[2]]*M[r[2], c[1]] + M[r[0], c[1]]*M[r[1], c[0]]*M[r[2], c[2]])
+    else:
+        det = 0
+        newr = r[1:]
+        sign = 1
+        for k in range(cols):
+            newc = c[:k] + c[(k + 1):]
+            det += determinant(M,newr,newc)*M[r[0],c[k]]*sign
+            sign *= -1
+        return det
+    
+    #### Available methods for computing determinant using Sympy: bareis, berkowitz, det_LU
+    #### Method 1: berkowitz
+    # eq = sympy.Matrix(H).det(method='berkowitz').as_poly().expand()
+    #### Method 2: bareis
+    # eq = sympy.Matrix(H).det(method='bareis').as_poly()
+    # for i in eq.gens[1:]:
+    #     eq = eq.eval(i,1)
+    # return eq
+    
+        
+        
+    
     
 
 
@@ -379,3 +421,92 @@ def EM(samples, theta0, tol=1e-3, printIter=False, maxIter=100):
             break
 
     return finiteRV(curP,curX), iterN
+
+
+
+
+def LLmatrix2(samples, model):
+    """
+    Log-likelihood matrix of samples under the given GM model
+    
+    Args:
+    samples: array
+    model: a GM instance
+
+    Return:
+    LL: log-likelihood, shape(len(samples), number of components)
+    """
+
+    samples = np.asarray(samples)
+    
+    precision = 1./(model.sigma**2) # inverse of sigma^2
+    LL0 = model.mu**2*precision - 2 * np.outer(samples, model.mu*precision) + np.outer(samples**2,precision)
+    return (-0.5*(np.log(2*np.pi)+LL0)-np.log(model.sigma))
+    
+
+def LL2(samples, model):
+    """
+    Log-likelihood matrix of samples under the given GM model
+    
+    Args:
+    samples: array
+    model: a GM instance
+
+    Return:
+    LL: log-likelihood
+    """
+    return np.sum( np.log( np.dot(np.exp(LLmatrix2(samples,model)), model.p) ))
+
+
+def EM2(samples, model0, tol=1e-3, printIter=False, maxIter=100):
+    """ EM for estimating U under model U+Z
+
+    Args:
+    model0 (modelGM): initial guess
+    tol(float): termination accuracy
+    printIter(bool): print results in each iteration 
+    maxIter(int): maximum iterations
+
+    Returns:
+    model(modelGM): estimated model
+    iterN(int): number of iterations
+
+    """
+    
+    k = len(model0.p)
+    n = len(samples)
+    samples = np.asarray(samples)
+
+    iterN = 0
+    model = model0
+    Lmat = np.exp(LLmatrix2(samples, model))
+    curLL = np.sum( np.log( np.dot(Lmat, model.p) ))
+
+    while(True):
+        preLL = curLL
+        
+        T = Lmat * model.p
+        T /= np.sum(T,axis=1)[:, np.newaxis]
+
+        N = np.sum(T,axis=0)
+
+        iterN += 1
+        model.p = N/np.sum(N)
+        model.mu = np.divide( np.matmul(samples,T), N )
+        
+        cross = model.mu**2 - 2 * np.outer(samples, model.mu) + (samples**2)[:, np.newaxis]
+        sigma2 = np.sum(cross*T)/n
+        model.sigma = np.ones(model.p.shape) * np.sqrt(sigma2)
+        
+        Lmat = np.exp(LLmatrix2(samples, model))
+        curLL = np.sum( np.log( np.dot(Lmat, model.p) ))
+
+        if printIter:
+            print(model.p,model.mu,model.sigma)
+            print(curLL)
+
+        if ( iterN > maxIter or curLL-preLL<tol ):
+            break
+
+    return model, iterN, curLL
+
