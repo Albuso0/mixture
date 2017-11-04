@@ -6,7 +6,7 @@ import numpy as np
 from solvers import mom_symbol, empiricalMoment, deconvolution 
 # from discreteRV import finiteRV
 from GM import modelGM, sampleGM
-
+from dmm import DMM
 
 def main_mom_bad():
     """
@@ -36,9 +36,13 @@ def main_mom_bad():
 
 
 if __name__ == '__main__':
-    main_mom_bad()
+    comp = 2
+    gm_model = modelGM(prob=[0.5, 0.5], mean=[-1, 1], std=2)
+    sample = sampleGM(gm_model, 10000)
+    # sample = np.array([1,2,3,4])
 
-
+    dmm = DMM(k=2, sigma=2)
+    print(dmm.estimate(sample))
 
 
 def main_lindsay():

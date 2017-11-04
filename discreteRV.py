@@ -15,6 +15,8 @@ class finiteRV:
         self.x = np.asarray(val)
         assert_shape_equal(self.p, self.x)
 
+    def __repr__(self):
+        return "atoms: %s\nweights: %s" % (self.x, self.p)
 
 
 def moment(RV, degree=1):
