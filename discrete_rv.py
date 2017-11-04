@@ -26,7 +26,7 @@ class DiscreteRV:
         assert_shape_equal(self.weights, self.atoms)
 
     def __repr__(self):
-        return "atoms: %s\nweights: %s" % (self.weights, self.atoms)
+        return "atom: %s\nwght: %s" % (self.atoms, self.weights)
 
     def moment(self, degree=1):
         """ Compute the moments of the input RV up to the given degree (start from first degree)

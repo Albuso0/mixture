@@ -69,6 +69,7 @@ def projection(moments, int_a=-1, int_b=1, wmat=None):
 
     Returns:
     a sequence of valid moments on [a,b], starting from degree 1 (default [a,b]=[-1,1])
+    minimize (moments-x)' * wmat * (moments-x), subject to x is a valid moment sequence
     """
     length = len(moments)
     if length == 0:
