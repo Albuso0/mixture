@@ -40,9 +40,24 @@ class DMM():
         self.right = b
         self.k = k
 
+        if self.sigma is None:
+            self.num_moments = 2*self.k
+        else:
+            self.num_moments = 2*self.k-1
+            self.tran_mat, self.tran_b = mm.hermite_transform_matrix(2*self.k-1, self.sigma)
+
+        # for online estimation
+        self.num_samples = 0
+        self.moments = np.zeros(self.num_moments)
+
+
     def estimate(self, samples):
         """
         estimate a model from given samples
+        use two-step estimate:
+        1.(a) prelimnary estimation with identity weight matrix
+          (b) estimation of optimal weight matrix (require all samples)
+        2.    reestimate parameters using esimated weight matrix
 
         Args:
         samples: array of float, required
@@ -53,12 +68,15 @@ class DMM():
         if sigma is None, return a tuple of estimated latent distribtuion and estimated sigma
         """
         samples = np.asarray(samples)
-        m_raw = mm.empirical_moment(samples, 2*self.k)
+        m_raw = mm.empirical_moment(samples, self.num_moments)
 
-        if self.sigma != None:
-            m_raw = m_raw[:2*self.k-1, :]
-            tran_mat, tran_b = mm.hermite_transform_matrix(2*self.k-1, self.sigma)
-            m_hermite = np.dot(tran_mat, m_raw)+tran_b
+        if self.sigma is None:
+            m_raw = np.mean(m_raw, axis=1)
+            m_esti, var_esti = mm.deconvolve_unknown_variance(m_raw)
+            dmom_rv = self.estimate_from_moments(m_esti[:2*self.k-1])
+            return dmom_rv, np.sqrt(var_esti)
+        else:
+            m_hermite = np.dot(self.tran_mat, m_raw)+self.tran_b
             m_decon = np.mean(m_hermite, axis=1)
             # preliminary estimate
             dmom_rv = self.estimate_from_moments(m_decon)
@@ -67,11 +85,37 @@ class DMM():
             # print(np.linalg.inv(wmat))
             dmom_rv = self.estimate_from_moments(m_decon, wmat)
             return dmom_rv
-        else:
-            m_raw = np.mean(m_raw, axis=1)
-            m_esti, var_esti = mm.deconvolve_unknown_variance(m_raw)
+
+
+    def estimate_online(self, samples_new):
+        """
+        update the estimate a model from more samples
+        only store a few moments
+        [TODO] online estimation of covariance matrix of moments condition (Kalman filter does?)
+
+        Args:
+        samples_new: array of floats
+        new samples
+
+        Returns:
+        if sigma is given, return estimated latent distribtuion
+        if sigma is None, return a tuple of estimated latent distribtuion and estimated sigma
+        """
+        samples_new = np.asarray(samples_new)
+        moments_new = np.mean(mm.empirical_moment(samples_new, self.num_moments), axis=1)
+        num_new = len(samples_new)
+        num_total = self.num_samples+num_new
+        self.moments = self.moments * self.num_samples/num_total + moments_new * num_new/num_total
+        self.num_samples = num_total
+
+        if self.sigma is None:
+            m_esti, var_esti = mm.deconvolve_unknown_variance(self.moments)
             dmom_rv = self.estimate_from_moments(m_esti[:2*self.k-1])
             return dmom_rv, np.sqrt(var_esti)
+        else:
+            m_decon = np.dot(self.tran_mat, self.moments)+self.tran_b
+            dmom_rv = self.estimate_from_moments(m_decon)
+            return dmom_rv
 
 
     def estimate_with_wmat(self, samples, wmat=None):
@@ -109,8 +153,7 @@ class DMM():
         samples = np.asarray(samples)
         m_raw = mm.empirical_moment(samples, 2*self.k-1)
         m_raw = np.mean(m_raw, axis=1)
-        tran_mat, tran_b = mm.hermite_transform_matrix(2*self.k-1, self.sigma)
-        return np.dot(tran_mat, m_raw)+tran_b
+        return np.dot(self.tran_mat, m_raw)+self.tran_b
 
     def estimate_from_moments(self, moments, wmat=None):
         """
