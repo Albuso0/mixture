@@ -37,11 +37,14 @@ def main_mom_bad():
 
 if __name__ == '__main__':
     comp = 2
-    gm_model = modelGM(prob=[0.5, 0.5], mean=[-1, 1], std=0.5)
+    gm_model = modelGM(prob=[0.5, 0.5], mean=[-1, 1], std=1)
     sample = sampleGM(gm_model, 10000)
     # sample = np.array([1,2,3,4])
 
-    dmm = DMM(k=2)
+    dmm = DMM(k=3, sigma=1)
+    print(dmm.estimate_with_wmat(sample))
+
+    # dmm = DMM(k=2)
     print(dmm.estimate(sample))
 
 

@@ -59,23 +59,26 @@ def hermite_transform_matrix(degree, sigma=1):
 
 
 
-def projection(moments, int_a=-1, int_b=1, wmat=None):
+def projection(moments, interval=None, wmat=None):
     """ project to a valid moment sequence on interval [a,b]
 
     Args:
     moments: a sequence of estimated moments, starting from degree 1
-    [a,b]: range of distributions, default [-1,1]
+    interval [a,b]: range of distributions, default [-1,1]
     wmat: weighting matrix, default identity matrix
 
     Returns:
     a sequence of valid moments on [a,b], starting from degree 1 (default [a,b]=[-1,1])
     minimize (moments-x)' * wmat * (moments-x), subject to x is a valid moment sequence
     """
+    if interval is None:
+        interval = [-1,1]
+
     length = len(moments)
     if length == 0:
         return moments
     if length == 1:
-        moments[0] = max(int_a, min(int_b, moments[0]))
+        moments[0] = max(interval[0], min(interval[1], moments[0]))
         return moments
 
 
@@ -91,14 +94,14 @@ def projection(moments, int_a=-1, int_b=1, wmat=None):
         # odd case
         k = int((length+1)/2)
         h_mat = cvxpy.Variable(k, k+1)
-        constraints = [h_mat[:, 1:]-int_a*h_mat[:, :k]>>0,
-                       int_b*h_mat[:, :k]-h_mat[:, 1:]>>0]
+        constraints = [h_mat[:, 1:]-interval[0]*h_mat[:, :k]>>0,
+                       interval[1]*h_mat[:, :k]-h_mat[:, 1:]>>0]
     else:
         # even case
         k = int(length/2)+1
         h_mat = cvxpy.Variable(k, k)
         constraints = [h_mat>>0,
-                       (int_a+int_b)*h_mat[:k-1, 1:]-int_a*int_b*h_mat[:k-1, :k-1]+h_mat[1:, 1:]>>0]
+                       (interval[0]+interval[1])*h_mat[:k-1, 1:]-interval[0]*interval[1]*h_mat[:k-1, :k-1]+h_mat[1:, 1:]>>0]
     num_row, num_col = h_mat.size
     for i in range(num_row):
         for j in range(num_col):

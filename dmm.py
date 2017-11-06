@@ -36,15 +36,14 @@ class DMM():
         number of postulated components
         """
         self.sigma = sigma
-        self.left = a
-        self.right = b
         self.k = k
+        self.interval = [a, b]
 
         if self.sigma is None:
             self.num_moments = 2*self.k
         else:
             self.num_moments = 2*self.k-1
-            self.tran_mat, self.tran_b = mm.hermite_transform_matrix(2*self.k-1, self.sigma)
+            self.transform = mm.hermite_transform_matrix(2*self.k-1, self.sigma)
 
         # for online estimation
         self.num_samples = 0
@@ -73,10 +72,10 @@ class DMM():
         if self.sigma is None:
             m_raw = np.mean(m_raw, axis=1)
             m_esti, var_esti = mm.deconvolve_unknown_variance(m_raw)
-            dmom_rv = self.estimate_from_moments(m_esti[:2*self.k-1])
+            dmom_rv = mm.quadmom(m_esti[:2*self.k-1])
             return dmom_rv, np.sqrt(var_esti)
         else:
-            m_hermite = np.dot(self.tran_mat, m_raw)+self.tran_b
+            m_hermite = np.dot(self.transform[0], m_raw)+self.transform[1]
             m_decon = np.mean(m_hermite, axis=1)
             # preliminary estimate
             dmom_rv = self.estimate_from_moments(m_decon)
@@ -110,10 +109,10 @@ class DMM():
 
         if self.sigma is None:
             m_esti, var_esti = mm.deconvolve_unknown_variance(self.moments)
-            dmom_rv = self.estimate_from_moments(m_esti[:2*self.k-1])
+            dmom_rv = mm.quadmom(m_esti[:2*self.k-1])
             return dmom_rv, np.sqrt(var_esti)
         else:
-            m_decon = np.dot(self.tran_mat, self.moments)+self.tran_b
+            m_decon = np.dot(self.transform[0], self.moments)+self.transform[1]
             dmom_rv = self.estimate_from_moments(m_decon)
             return dmom_rv
 
@@ -134,6 +133,8 @@ class DMM():
         Returns:
         latent distribtuion
         """
+        assert self.sigma
+
         m_latent = self.estimate_latent_moments(samples)
         return self.estimate_from_moments(m_latent, wmat)
 
@@ -148,12 +149,15 @@ class DMM():
         samples: array of length n
 
         Return:
-        estimated moments of U from degree 1 to k
+        array of length 2k-1
+        estimated moments of U from degree 1 to 2k-1
         """
+        assert self.sigma
+
         samples = np.asarray(samples)
-        m_raw = mm.empirical_moment(samples, 2*self.k-1)
-        m_raw = np.mean(m_raw, axis=1)
-        return np.dot(self.tran_mat, m_raw)+self.tran_b
+        m_raw = mm.empirical_moment(samples, self.num_moments)
+        m_raw = np.mean(m_raw, axis=1).reshape((self.num_moments, 1))
+        return ((np.dot(self.transform[0], m_raw)+self.transform[1])).reshape(self.num_moments)
 
     def estimate_from_moments(self, moments, wmat=None):
         """
@@ -169,7 +173,7 @@ class DMM():
         Returns:
         an estimated model on at most k points
         """
-        m_proj = mm.projection(moments, self.left, self.right, wmat)
+        m_proj = mm.projection(moments, self.interval, wmat)
         dmom_rv = mm.quadmom(m_proj, dettol=0)
         return dmom_rv
 
