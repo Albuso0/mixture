@@ -167,3 +167,145 @@ def quadmom(moments, dettol=0, inf=1e10):
     weights = moments[0] * np.power(eigvec[0], 2)
 
     return DiscreteRV(weights=weights, atoms=atoms)
+
+
+def deconvolve_unknown_variance(moments):
+    """ Deconvolution with unknown sigma, using Lindsay's estimator.
+    Fit moments with U+sigma Z. Estimate common sigma, and moments of U.
+
+    Args:
+    moments: array of float, length 2k
+    moments estimate of degree 1 to 2k
+
+    Returns:
+    Tuple of deconvolved moments and estimated variance (sigma^2)
+    """
+
+    moments = np.insert(moments, 0, 1)
+
+    length = len(moments)
+    m_hermite = [0]*length
+    x_var = np.poly1d([1, 0]) # x = sigma^2
+
+    if length > 0:
+        prepre = np.zeros(moments.shape)
+        prepre[0]=1
+        m_hermite[0] = moments[0]
+    if length > 1:
+        pre = np.zeros(moments.shape)
+        pre[1]=1
+        m_hermite[1] = moments[1]
+    for k in range(2, length):
+        # recursion: H_{n+1}(x) = x * H_n(x) - n * H_{n-1}(x)
+        coeffs = np.roll(pre, 1) - prepre*(k-1)
+        for i in range(k+1):
+            m_hermite[k] += float(coeffs[i]*moments[i])*(x_var**(int((k-i)/2)))
+        prepre = pre
+        pre = coeffs
+
+    # Solve the first non-negative root
+    equation = det_mom(m_hermite)
+
+    root = equation.r
+    root = root[np.isreal(root)].real
+    root = root[root >= 0]
+    root.sort()
+    # print(root)
+    root0 = root[0]
+
+    for k in range(2, length):
+        m_hermite[k] = m_hermite[k](root0)
+
+    return (np.asarray(m_hermite[1:]), float(root0))
+
+
+
+def det_mom(moments):
+    """
+    Compute determinant of moment matrix
+
+    Args:
+    moments: array of moments of
+
+    Return:
+    determinant of moment matrix
+    """
+    return determinant(get_hankel(moments))
+
+
+def get_hankel(moments):
+    """
+    Construct Hankel matrix from (m_0,...,m_{2k})
+
+    Args:
+    moments: array of floats of length 2k+1
+    moments of degrees from 0 to 2k
+
+    Return:
+    Hankel matrix from those moments of size (k+1,k+1)
+    """
+    # length of m = 2k+1 = 2k_inc-1
+    k_inc = int((len(moments)+1)/2)
+    matrix = [[0]*k_inc for i in range(k_inc)]
+    for i in range(k_inc):
+        for j in range(k_inc):
+            matrix[i][j] = moments[i+j]
+
+    return matrix
+
+
+def determinant(mat, rows=None, cols=None):
+    """
+    Compute the determinant of a submatrix
+
+    Args:
+    mat: matrix, list of lists
+    input matrix
+
+    rows: list of int
+    selection of rows
+
+    cols: list of int, same size as rows
+    selection of columns
+
+    Returns:
+    determinant of submatrix mat[rows, cols]
+    """
+    if rows is None:
+        num_rows, num_cols = len(mat), len(mat[0])
+        rows = list(range(num_rows))
+        cols = list(range(num_cols))
+
+    num_rows = len(rows)
+    num_cols = len(cols)
+    assert num_rows == num_cols
+
+    if num_rows == 1:
+        return mat[rows[0]][cols[0]]
+    # elif rows == 2:
+    #     return M[r[0]][c[0]]*M[r[1]][c[1]] - M[r[0]][c[1]]*M[r[1]][c[0]]
+    # elif rows == 3:
+    #     return (M[r[0]][c[0]]*M[r[1]][c[1]]*M[r[2]][c[2]]
+    #             + M[r[0]][c[1]]*M[r[1]][c[2]]*M[r[2]][c[0]]
+    #             + M[r[0]][c[2]]*M[r[1]][c[0]]*M[r[2]][c[1]])
+    #             - (M[r[0]][c[2]]*M[r[1]][c[1]]*M[r[2]][c[0]]
+    #             + M[r[0]][c[0]]*M[r[1]][c[2]]*M[r[2]][c[1]]
+    #             + M[r[0]][c[1]]*M[r[1]][c[0]]*M[r[2]][c[2]])
+    else:
+        det = 0
+        newr = rows[1:]
+        sign = 1
+        for k in range(num_cols):
+            newc = cols[:k] + cols[(k + 1):]
+            det += determinant(mat, newr, newc)*mat[rows[0]][cols[k]]*sign
+            sign *= -1
+        return det
+
+    #### Available methods for computing determinant using Sympy: bareis, berkowitz, det_LU
+    #### Method 1: berkowitz
+    # eq = sympy.Matrix(H).det(method='berkowitz').as_poly().expand()
+    #### Method 2: bareis
+    # eq = sympy.Matrix(H).det(method='bareis').as_poly()
+    # for i in eq.gens[1:]:
+    #     eq = eq.eval(i,1)
+    # return eq

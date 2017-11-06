@@ -49,7 +49,8 @@ class DMM():
         samples collected
 
         Returns:
-        latent distribtuion
+        if sigma is given, return estimated latent distribtuion
+        if sigma is None, return a tuple of estimated latent distribtuion and estimated sigma
         """
         samples = np.asarray(samples)
         m_raw = mm.empirical_moment(samples, 2*self.k)
@@ -65,8 +66,13 @@ class DMM():
             wmat = estimate_weight_matrix(m_hermite, dmom_rv)
             # print(np.linalg.inv(wmat))
             dmom_rv = self.estimate_from_moments(m_decon, wmat)
+            return dmom_rv
+        else:
+            m_raw = np.mean(m_raw, axis=1)
+            m_esti, var_esti = mm.deconvolve_unknown_variance(m_raw)
+            dmom_rv = self.estimate_from_moments(m_esti[:2*self.k-1])
+            return dmom_rv, np.sqrt(var_esti)
 
-        return dmom_rv
 
     def estimate_with_wmat(self, samples, wmat=None):
         """
@@ -125,7 +131,6 @@ class DMM():
         return dmom_rv
 
 
-
 def estimate_weight_matrix(m_estimate, model):
     """
     estimate weight matrix: inverse of the estimated covariance matrix
@@ -146,5 +151,3 @@ def estimate_weight_matrix(m_estimate, model):
     m_cond_avg = np.mean(m_cond, axis=1).reshape((num_moments, 1))
     m_cond_centd = m_cond - m_cond_avg
     return np.linalg.inv(np.dot(m_cond_centd, m_cond_centd.T)/num_samples)
-
-
