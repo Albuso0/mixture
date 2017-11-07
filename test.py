@@ -6,25 +6,24 @@ from model_gm import ModelGM, sample_gm
 from em import EM
 from mm import MM
 from dmm import DMM
-
+from discrete_rv import wass
 
 
 
 if __name__ == '__main__':
-    comp = 2
+    k = 3
+    mm = MM(k, sigma=1)
+    em = EM(k, sigma=1)
+    dmm = DMM(k, sigma=None)
+
     model = ModelGM(w=[0.5, 0.5], x=[-1, 1], std=1)
     sample = sample_gm(model, 10000)
-    means = model.mean_rv()
 
-
-    num_comps = 3
-    dmm = DMM(k=num_comps, sigma=1)
-    mm = MM(k=num_comps, sigma=1)
-    em = EM(k=num_comps, sigma=1)
-    esti_em = em.estimate(sample)
-    print(esti_em.mean_rv(), means.dist_w1(esti_em.mean_rv()))
-    esti_dmm = dmm.estimate(sample)
-    print(esti_dmm, means.dist_w1(esti_dmm))
+    # esti_em = em.estimate(sample)
+    # print(wass(esti_em.mean_rv(), model.mean_rv()))
+    print(dmm.estimate(sample))
+    print(dmm.estimate_online(sample))
+    # print(wass(esti_dmm, model.mean_rv()))
     # print(mm.estimate(sample))
 
     # dmm = DMM(k=2)

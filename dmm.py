@@ -49,8 +49,12 @@ class DMM():
             self.transform = mm.hermite_transform_matrix(2*self.k-1, self.sigma)
 
         # for online estimation
-        self.num_samples = 0
-        self.moments = np.zeros((self.num_mom, 1))
+        # if sigma is None, this stores list of (sample size, raw moments)
+        # if sigma is known, this store list of (sample size, Hermite moments, correlation)
+        if self.sigma is None:
+            self.online = [0, np.zeros((self.num_mom, 1))]
+        else:
+            self.online = [0, np.zeros((self.num_mom, 1)), np.zeros((self.num_mom, self.num_mom))]
 
 
     def estimate(self, samples):
@@ -80,20 +84,17 @@ class DMM():
         else:
             m_hermite = np.dot(self.transform[0], m_raw)+self.transform[1]
             m_decon = np.mean(m_hermite, axis=1)
-            # preliminary estimate
-            dmom_rv = self.estimate_from_moments(m_decon)
-            # second step estimate
+            dmom_rv = self.estimate_from_moments(m_decon) # preliminary estimate
             wmat = estimate_weight_matrix(m_hermite, dmom_rv)
+            dmom_rv = self.estimate_from_moments(m_decon, wmat) # second step estimate
             # print(np.linalg.inv(wmat))
-            dmom_rv = self.estimate_from_moments(m_decon, wmat)
             return dmom_rv
 
 
     def estimate_online(self, samples_new):
         """
         update the estimate a model from more samples
-        only store a few moments
-        [TODO] online estimation of covariance matrix of moments condition (Kalman filter does?)
+        only store a few moments and correlations
 
         Args:
         samples_new: array of floats
@@ -104,20 +105,27 @@ class DMM():
         if sigma is None, return a tuple of estimated latent distribtuion and estimated sigma
         """
         samples_new = np.asarray(samples_new)
-        m_new = mm.empirical_moment(samples_new, self.num_mom)
-        m_new = np.mean(m_new, axis=1).reshape((self.num_mom, 1))
+        m_new = mm.empirical_moment(samples_new, self.num_mom) # moments, shape (k,n)
         n_new = len(samples_new)
-        n_total = self.num_samples+n_new
-        self.moments = self.moments * self.num_samples/n_total + m_new * n_new/n_total
-        self.num_samples = n_total
+        n_total = self.online[0]+n_new
+
+        if self.sigma:
+            m_new = np.dot(self.transform[0], m_new)+self.transform[1]
+            cor_new = np.dot(m_new, m_new.T)/n_new
+            self.online[2] = self.online[2]*(self.online[0]/n_total)+cor_new*(n_new/n_total)
+
+        mom_new = np.mean(m_new, axis=1)[:, np.newaxis] # empirical moments, shape (k,1)
+        self.online[1] = self.online[1]*(self.online[0]/n_total)+mom_new*(n_new/n_total)
+        self.online[0] = n_total
 
         if self.sigma is None:
-            m_esti, var_esti = mm.deconvolve_unknown_variance(self.moments)
+            m_esti, var_esti = mm.deconvolve_unknown_variance(self.online[1])
             dmom_rv = mm.quadmom(m_esti[:2*self.k-1])
             return dmom_rv, np.sqrt(var_esti)
         else:
-            m_decon = np.dot(self.transform[0], self.moments)+self.transform[1]
-            dmom_rv = self.estimate_from_moments(m_decon.reshape(self.num_mom))
+            wmat = np.linalg.inv(self.online[2]-np.dot(self.online[1], self.online[1].T))
+            dmom_rv = self.estimate_from_moments(self.online[1].reshape(self.num_mom), wmat)
+            # print(np.linalg.inv(wmat))
             return dmom_rv
 
 
