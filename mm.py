@@ -5,6 +5,7 @@ import sympy
 import numpy as np
 import scipy
 from discrete_rv import DiscreteRV
+from model_gm import ModelGM
 import moments as mom
 
 class MM():
@@ -26,7 +27,8 @@ class MM():
         m_raw = mom.empirical_moment(samples, 2*self.k-1)
         m_raw = np.mean(m_raw, axis=1).reshape((self.num_mm, 1))
         m_decon = np.dot(self.transform[0], m_raw)+self.transform[1]
-        return self.mom_symbol(m_decon.reshape(self.num_mm))
+        mm_rv = self.mom_symbol(m_decon.reshape(self.num_mm))
+        return ModelGM(w=mm_rv.weights, x=mm_rv.atoms, std=self.sigma)
 
     def mom_symbol(self, moments):
         """ Symbolic solver for ordinary method of moments

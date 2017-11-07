@@ -11,7 +11,7 @@ from discrete_rv import wass
 
 
 if __name__ == '__main__':
-    k = 3
+    k = 2
     mm = MM(k, sigma=1)
     em = EM(k, sigma=1)
     dmm = DMM(k, sigma=None)
