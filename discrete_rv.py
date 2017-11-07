@@ -16,13 +16,13 @@ def assert_shape_equal(x_var, y_var):
 class DiscreteRV:
     """ class for 1-d finite discrete RV
     """
-    def __init__(self, weights, atoms):
+    def __init__(self, w, x):
         """
         weights: probabilites masses
         atoms: atoms
         """
-        self.weights = np.asarray(weights)
-        self.atoms = np.asarray(atoms)
+        self.weights = np.asarray(w)
+        self.atoms = np.asarray(x)
         assert_shape_equal(self.weights, self.atoms)
 
     def __repr__(self):
@@ -72,13 +72,13 @@ class DiscreteRV:
         return self.sample(num) + sigma*np.random.randn(num)
 
 def wass(u_rv, v_rv):
-    """ compute W1 distance between finiteRVs U and V
+    """ compute W1 distance between DiscreteRVs U and V
     """
-    if len(u_rv.x) == 0 or len(v_rv.x) == 0:
+    if len(u_rv.atoms) == 0 or len(v_rv.atoms) == 0:
         return 0.
 
-    x_u, p_u = zip(*sorted(zip(u_rv.x, u_rv.p)))
-    x_v, p_v = zip(*sorted(zip(v_rv.x, v_rv.p)))
+    x_u, p_u = zip(*sorted(zip(u_rv.atoms, u_rv.weights)))
+    x_v, p_v = zip(*sorted(zip(v_rv.atoms, v_rv.weights)))
     l_u, l_v, diff_cdf, dist, pre = 0, 0, 0., 0., 0.
     while l_u < len(x_u) or l_v < len(x_v):
         if l_v == len(x_v) or (l_u < len(x_u) and x_v[l_v] > x_u[l_u]):

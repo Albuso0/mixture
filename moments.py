@@ -58,6 +58,26 @@ def hermite_transform_matrix(degree, sigma=1):
     return (mat[1:, 1:], mat[1:, 0].reshape((degree, 1)))
 
 
+def transform(mat, x_var):
+    """
+    Compute a linear tranformation Ax+b
+
+    mat: Tuple (A,b)
+    A: matrix of shape (k,k)
+    b: matrix of shape (k,1)
+
+    x_var: variable x
+    array of length k
+
+    Returns:
+    array of length k, y=Ax+b
+    """
+    k = len(mat)
+    x_var = x_var.reshape((k, 1))
+    y_var = np.dot(mat[0], x_var)+mat[1]
+    return y_var.reshape(k)
+
+
 
 def projection(moments, interval=None, wmat=None):
     """ project to a valid moment sequence on interval [a,b]
@@ -72,7 +92,7 @@ def projection(moments, interval=None, wmat=None):
     minimize (moments-x)' * wmat * (moments-x), subject to x is a valid moment sequence
     """
     if interval is None:
-        interval = [-1,1]
+        interval = [-1, 1]
 
     length = len(moments)
     if length == 0:
@@ -169,7 +189,7 @@ def quadmom(moments, dettol=0, inf=1e10):
     atoms = eigval
     weights = moments[0] * np.power(eigvec[0], 2)
 
-    return DiscreteRV(weights=weights, atoms=atoms)
+    return DiscreteRV(w=weights, x=atoms)
 
 
 def deconvolve_unknown_variance(moments):

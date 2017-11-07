@@ -23,31 +23,34 @@ class DMM():
     """
     class for denoised method of moments
     """
-    def __init__(self, k, a=-10, b=10, sigma=None):
+    def __init__(self, k, interval=None, sigma=None):
         """
         Args:
         sigma: float, default None
         standard deviation. If sigma == None, will estimate sigma.
 
-        a, b: floats, default -10 and 10
+        interval =[a,b]: floats, default [-10, 10]
         represents the interval of means [a,b]
 
         num_components: int, required
         number of postulated components
         """
+        if interval is None:
+            interval = [-10, 10]
+
         self.sigma = sigma
         self.k = k
-        self.interval = [a, b]
+        self.interval = interval
 
         if self.sigma is None:
-            self.num_moments = 2*self.k
+            self.num_mom = 2*self.k
         else:
-            self.num_moments = 2*self.k-1
+            self.num_mom = 2*self.k-1
             self.transform = mm.hermite_transform_matrix(2*self.k-1, self.sigma)
 
         # for online estimation
         self.num_samples = 0
-        self.moments = np.zeros(self.num_moments)
+        self.moments = np.zeros((self.num_mom, 1))
 
 
     def estimate(self, samples):
@@ -67,7 +70,7 @@ class DMM():
         if sigma is None, return a tuple of estimated latent distribtuion and estimated sigma
         """
         samples = np.asarray(samples)
-        m_raw = mm.empirical_moment(samples, self.num_moments)
+        m_raw = mm.empirical_moment(samples, self.num_mom)
 
         if self.sigma is None:
             m_raw = np.mean(m_raw, axis=1)
@@ -101,11 +104,12 @@ class DMM():
         if sigma is None, return a tuple of estimated latent distribtuion and estimated sigma
         """
         samples_new = np.asarray(samples_new)
-        moments_new = np.mean(mm.empirical_moment(samples_new, self.num_moments), axis=1)
-        num_new = len(samples_new)
-        num_total = self.num_samples+num_new
-        self.moments = self.moments * self.num_samples/num_total + moments_new * num_new/num_total
-        self.num_samples = num_total
+        m_new = mm.empirical_moment(samples_new, self.num_mom)
+        m_new = np.mean(m_new, axis=1).reshape((self.num_mom, 1))
+        n_new = len(samples_new)
+        n_total = self.num_samples+n_new
+        self.moments = self.moments * self.num_samples/n_total + m_new * n_new/n_total
+        self.num_samples = n_total
 
         if self.sigma is None:
             m_esti, var_esti = mm.deconvolve_unknown_variance(self.moments)
@@ -113,7 +117,7 @@ class DMM():
             return dmom_rv, np.sqrt(var_esti)
         else:
             m_decon = np.dot(self.transform[0], self.moments)+self.transform[1]
-            dmom_rv = self.estimate_from_moments(m_decon)
+            dmom_rv = self.estimate_from_moments(m_decon.reshape(self.num_mom))
             return dmom_rv
 
 
@@ -155,9 +159,9 @@ class DMM():
         assert self.sigma
 
         samples = np.asarray(samples)
-        m_raw = mm.empirical_moment(samples, self.num_moments)
-        m_raw = np.mean(m_raw, axis=1).reshape((self.num_moments, 1))
-        return ((np.dot(self.transform[0], m_raw)+self.transform[1])).reshape(self.num_moments)
+        m_raw = mm.empirical_moment(samples, self.num_mom)
+        m_raw = np.mean(m_raw, axis=1).reshape((self.num_mom, 1))
+        return ((np.dot(self.transform[0], m_raw)+self.transform[1])).reshape(self.num_mom)
 
     def estimate_from_moments(self, moments, wmat=None):
         """
@@ -176,7 +180,6 @@ class DMM():
         m_proj = mm.projection(moments, self.interval, wmat)
         dmom_rv = mm.quadmom(m_proj, dettol=0)
         return dmom_rv
-
 
 def estimate_weight_matrix(m_estimate, model):
     """
