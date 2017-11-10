@@ -14,6 +14,14 @@ printGM <- function(GM) {
     ## cat(x,p,1-sum(p),"\n",sep=" ")
 }
 
+model.p = c(0.4,0.6)
+model.x = c(-1.2,1.6)
+n = 5000
+u <- sample(x = model.x, n, replace = T, prob = model.p) 
+z <- rnorm(n, mean = 0, sd = 1)
+x <- u+z
+print(gmmGM(2,x,sigma=-1))
+quit()
 
 k <- 4
 g <- g4 ## gk: k-component
