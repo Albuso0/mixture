@@ -2,6 +2,7 @@
 module for Gaussian mixture model
 """
 from discrete_rv import DiscreteRV, assert_shape_equal
+from moments import hermite_transform_matrix, empirical_moment
 import numpy as np
 
 class ModelGM:
@@ -30,6 +31,25 @@ class ModelGM:
 
     def __repr__(self):
         return "atom: %s\nwght: %s\nsigm: %s" % (self.centers, self.weights, self.sigma[0])
+
+    def moments_gm(self, degree):
+        """
+        moments of GM model
+
+        Args:
+        degree: int
+        highest degree k
+
+        Returns:
+        moments of Gaussian mixture model from degree 1 to k
+        """
+        mom = empirical_moment(self.centers/self.sigma, degree)
+        transform = hermite_transform_matrix(degree)
+        transform = (np.abs(transform[0]), np.abs(transform[1]))
+        mom = np.dot(transform[0], mom) + transform[1]
+        s_pow = empirical_moment(self.sigma, degree)
+        mom = s_pow*mom
+        return np.dot(mom, self.weights)
 
     def mean_rv(self):
         """

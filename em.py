@@ -61,13 +61,13 @@ class EM():
             else:
                 s_init = self.sigma
             start = ModelGM(w=w_init, x=x_init, std=s_init)
-            model_cur, _, ll_cur = self.estimate_with_init(samples, start)
+            model_cur, _, ll_cur = self.estimate_with_init(samples, start, detail=True)
             if ll_cur > ll_max:
                 model = model_cur
                 ll_max = ll_cur
         return model
 
-    def estimate_with_init(self, samples, init):
+    def estimate_with_init(self, samples, init, detail=False):
         """
         estimate a model from a given initial
         Args:
@@ -78,7 +78,8 @@ class EM():
         iterN(int): number of iterations
         ll_cur(float): last log-likelihood
         """
-        assert self.k == len(init.weights)
+        # assert self.k == len(init.weights)
+        k_cur = len(init.weights)
         num = len(samples)
         samples = np.asarray(samples)
 
@@ -104,7 +105,7 @@ class EM():
                 cross = model.centers**2-2*np.outer(samples, model.centers)\
                         +(samples**2)[:, np.newaxis]
                 sigma2 = np.sum(cross*labels)/num
-                model.sigma = np.ones(self.k) * np.sqrt(sigma2)
+                model.sigma = np.ones(k_cur) * np.sqrt(sigma2)
 
             l_mat = np.exp(ll_mat(samples, model))
             ll_cur = np.sum(np.log(np.dot(l_mat, model.weights)))
@@ -116,7 +117,10 @@ class EM():
             if num_iter > self.max_iter or ll_cur-ll_pre < self.tol:
                 break
 
-        return model, num_iter, ll_cur
+        if detail:
+            return model, num_iter, ll_cur
+        else:
+            return model
 
 def ll_mat(samples, model):
     """

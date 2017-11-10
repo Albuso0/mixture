@@ -14,7 +14,7 @@ def empirical_moment(samples, degree):
     degree: L
 
     Returns
-    matrix M of size k*n
+    matrix M of size L*n
     each row is the moments of (x1...xn) (start from the first degree to degree L)
     """
     m_raw = np.empty((degree, len(samples)))
