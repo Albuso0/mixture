@@ -1,3 +1,7 @@
+library(gmm)
+library(MCMCpack)
+## library(transport)
+
 gmmGM <- function(k, x, sigma=-1) {
     ## k: number of components
     ## x: samples
@@ -94,6 +98,56 @@ gmmGM <- function(k, x, sigma=-1) {
         std <- sigma
     }
     return(list(wgt,atm,std))
+}
+
+
+sampleGM <- function(n, p, x, sigma=1) {
+    ## p: mixing weights
+    ## x: centers
+    ## sigma: standard deviation
+    ## return: n samples from Gaussian mixture model 
+    u <- sample(x = x, n, replace = T, prob = p) 
+    z <- rnorm(n, mean = 0, sd = 1)
+    x <- u+sigma*z
+    return(x)
+}
+
+w1 <- function(p1, x1, p2, x2) {
+    ## p1: weights of distribution D1
+    ## x1: atoms of distribution D1
+    ## p2: weights of distribution D2
+    ## x2: atoms of distribution D2
+    ## return: W1 distance between D1 and D2
+    
+    if (length(p1) == 0 || length(p2) == 0) {
+        return(0)
+    }
+    ord1 <- order(x1)
+    ord2 <- order(x2)
+    p1 <- p1[ord1]
+    x1 <- x1[ord1]
+    p2 <- p2[ord2]
+    x2 <- x2[ord2]
+    l1 <- 1
+    l2 <- 1
+    diffCDF <- 0
+    pre <- 0
+    dist <- 0
+    while (l1<=length(p1) || l2 <=length(p2)) {
+        if (l2 > length(p2) || (l1<=length(p1) && x1[l1]<x2[l2])) {
+            dist <- dist + abs(diffCDF)*(x1[l1]-pre)
+            pre <- x1[l1]
+            diffCDF <- diffCDF + p1[l1]
+            l1 <- l1+1
+        }
+        else {
+            dist <- dist + abs(diffCDF)*(x2[l2]-pre)
+            pre <- x2[l2]
+            diffCDF <- diffCDF - p2[l2]
+            l2 <- l2+1
+        }
+    }
+    return(dist)
 }
 
 momentAll <- function(x, L) {

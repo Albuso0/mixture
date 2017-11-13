@@ -1,7 +1,4 @@
-library(gmm)
-library(MCMCpack)
-source("functions.R")
-## library(transport)
+source("gmmGM.R")
 
 
 printGM <- function(GM) {
@@ -13,40 +10,16 @@ printGM <- function(GM) {
     cat("x= ", x, "\n", sep=" ")
     ## cat(x,p,1-sum(p),"\n",sep=" ")
 }
-
-model.p = c(0.4,0.6)
-model.x = c(-1.2,1.6)
-n = 5000
-u <- sample(x = model.x, n, replace = T, prob = model.p) 
-z <- rnorm(n, mean = 0, sd = 1)
-x <- u+z
-print(gmmGM(2,x,sigma=-1))
+model.p = c(0.6,0.4)
+model.x = c(1.6,-1.2)
+x <- sampleGM(n=5000, p=model.p, x=model.x, sigma=2)
+estimate <- gmmGM(k=2, x, sigma=-1)
+esti.p <- estimate[[1]]
+esti.x <- estimate[[2]]
+esti.sigma <- estimate[[3]]
+print(w1(model.p, model.x, esti.p, esti.x))
 quit()
 
-k <- 4
-g <- g4 ## gk: k-component
-
-#### inequality constraints in k=5
-## ui = rbind(c(0,0,0,0,0,1,0,0,0),
-##            c(0,0,0,0,0,-1,0,0,0),
-##            c(0,0,0,0,0,0,1,0,0),
-##            c(0,0,0,0,0,0,-1,0,0),
-##            c(0,0,0,0,0,0,0,1,0),
-##            c(0,0,0,0,0,0,0,-1,0),
-##            c(0,0,0,0,0,0,0,0,1),
-##            c(0,0,0,0,0,0,0,0,-1),
-##            c(0,0,0,0,0,-1,-1,-1,-1))
-## ci = c(0,-1,0,-1,0,-1,0,-1,-1)
-
-#### inequality constraints in k=4
-ui = rbind(c(0,0,0,0,1,0,0),
-           c(0,0,0,0,-1,0,0),
-           c(0,0,0,0,0,1,0),
-           c(0,0,0,0,0,-1,0),
-           c(0,0,0,0,0,0,1),
-           c(0,0,0,0,0,0,-1),
-           c(0,0,0,0,-1,-1,-1))
-ci = c(0,-1,0,-1,0,-1,-1)
 
 ## cat("Model: \n")
 model.p = c(1.)
@@ -100,25 +73,4 @@ for (j in 1:length(sample)){
     time = proc.time() - ptm
     cat("Time:", time[1]," seconds\n", sep=" ")
 }
-
-
-
-
-
-
-
-
-
-
-
-
-## wcnt <- 0
-
-## tryCatch(print(gmm(g,x,c(p1=0.5,x1=0,x2=0))), warning=function(w) {
-##     wcnt <<- wcnt + 1
-##     print(w)
-## } )
-
-## print(sprintf("Warnings: %d/1000 experiments", wcnt))
-
 
