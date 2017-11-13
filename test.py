@@ -16,7 +16,7 @@ if __name__ == '__main__':
     em = EM(k, sigma=1)
     dmm = DMM(k, sigma=None)
 
-    model = ModelGM(w=[0.5, 0.5], x=[-1, 1], std=1)
+    model = ModelGM(w=[0.5, 0.5], x=[-.5, .5], std=1)
     sample = sample_gm(model, 10000)
 
     # esti_em = em.estimate(sample)

@@ -7,7 +7,7 @@ gmmGM <- function(k, x, sigma=-1) {
     ## x: samples
     ## sigma: common standard deviation. sigma<0 means unknown. 
     ## Returns:
-    ## return estimated model (p,x,sigma)
+    ## return estimated model (p,x,sigma), initial guess is best of five random guesses
 
     ## parameters
     ## if simga<0 (unknown), param = (x_1,...,x_k, p_1,...,p_{k-1}, sigma)
@@ -89,22 +89,25 @@ gmmGM <- function(k, x, sigma=-1) {
     }
     
     param <- GM$coefficients
-    atm <- param[1:k]
-    wgt <- c(param[(k+1):(2*k-1)],1-sum(param[(k+1):(2*k-1)]))
+    atm <- as.vector(param[1:k])
+    wgt <- as.vector(c(param[(k+1):(2*k-1)],1-sum(param[(k+1):(2*k-1)])))
     if (sigma<0) {
-        std <- param[L]
+        std <- as.vector(param[L])
     }
     else {
-        std <- sigma
+        std <- as.vector(sigma)
     }
-    return(list(wgt,atm,std))
+    res <- list(wgt,atm,std)
+    names(res) <- c("Weights", "Centers", "Sigma") 
+
+    return(res)
 }
 
 
 sampleGM <- function(n, p, x, sigma=1) {
     ## p: mixing weights
     ## x: centers
-    ## sigma: standard deviation
+    ## sigma: standard deviation, default sigma=1
     ## return: n samples from Gaussian mixture model 
     u <- sample(x = x, n, replace = T, prob = p) 
     z <- rnorm(n, mean = 0, sd = 1)
