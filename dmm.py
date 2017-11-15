@@ -89,7 +89,6 @@ class DMM():
             # print(np.linalg.inv(wmat))
             return ModelGM(w=dmom_rv.weights, x=dmom_rv.atoms, std=self.sigma)
 
-
     def estimate_online(self, samples_new):
         """
         update the estimate a model from more samples
@@ -103,7 +102,7 @@ class DMM():
         an estimated ModelGM
         """
         samples_new = np.asarray(samples_new)
-        m_new = mm.empirical_moment(samples_new, self.num_mom) # moments, shape (k,n)
+        m_new = mm.empirical_moment(samples_new, self.num_mom) # moments, shape (L,n)
         n_new = len(samples_new)
         n_total = self.online[0]+n_new
 
@@ -112,7 +111,7 @@ class DMM():
             cor_new = np.dot(m_new, m_new.T)/n_new
             self.online[2] = self.online[2]*(self.online[0]/n_total)+cor_new*(n_new/n_total)
 
-        mom_new = np.mean(m_new, axis=1)[:, np.newaxis] # empirical moments, shape (k,1)
+        mom_new = np.mean(m_new, axis=1)[:, np.newaxis] # empirical moments, shape (L,1)
         self.online[1] = self.online[1]*(self.online[0]/n_total)+mom_new*(n_new/n_total)
         self.online[0] = n_total
 
@@ -148,6 +147,13 @@ class DMM():
         dmom_rv = self.estimate_from_moments(m_latent, wmat)
         return ModelGM(w=dmom_rv.weights, x=dmom_rv.atoms, std=self.sigma)
 
+    def estimate_select(self, samples, threhold=1):
+        """
+        estimate with selected number of components
+        """
+        k_cur = min(self.select_num_comp(samples, threhold), self.k)
+        dmm_cur = DMM(k=k_cur, interval=self.interval, sigma=self.sigma)
+        return dmm_cur.estimate(samples)
 
     def estimate_latent_moments(self, samples):
         """
@@ -186,6 +192,40 @@ class DMM():
         m_proj = mm.projection(moments, self.interval, wmat)
         dmom_rv = mm.quadmom(m_proj, dettol=0)
         return dmom_rv
+
+    def sample_moment_cov(self, samples):
+        """
+        return the sample covariance matrix of moments estimates
+        """
+        samples = np.asarray(samples)
+        mom = mm.empirical_moment(samples, self.num_mom) # moments, shape (L,n)
+        mean = np.mean(mom, axis=1)
+        num = len(samples)
+        cor = np.dot(mom, mom.T)/num - np.outer(mean, mean)
+        return cor
+
+    def select_num_comp(self, samples, threhold=1):
+        """
+        select the number of components
+        according to sample variance of moments estimate
+        """
+        samples = np.asarray(samples)
+        num = len(samples)
+
+        m_raw = np.ones(len(samples))
+        deg_cur = 0
+        while True:
+            deg_cur += 1
+            m_raw *= samples
+            var = np.mean(m_raw**2)-np.mean(m_raw)**2
+            if var > threhold*num:
+                break
+
+        # moments of degree 1 to (deg_cur-1) is accurate
+        if self.sigma:
+            return int(np.floor(deg_cur/2))
+        else:
+            return int(np.floor((deg_cur-1)/2))
 
 def estimate_weight_matrix(m_estimate, model):
     """

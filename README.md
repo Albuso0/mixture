@@ -30,6 +30,20 @@ wght: [ 0.51917043  0.48082957]
 sigm: 1.0
 ```
 
+More on DMM
+----
+* `dmm.estimate(samples)` uses two-step method: 
+  1. prelimnary estimation with identity weight matrix, and (consistent) estimation of optimal weight matrix (the same procedure as GMM, [ref: [Bruce E. Hansen] Econometrics. Chapter 11](https://www.ssc.wisc.edu/~bhansen/econometrics/Econometrics.pdf)); 
+  2. reestimate parameters using esimated weight matrix.
+* `dmm.estimate_online(new_samples)` instead of accessing all n samples, this method only stores moments estimate of size O(k), and sample correlation matrix of size O(k*k). 
+  - The weight matrix is the inverse of sample covariance matrix of moments estimate (another consistent estimation of optimal weight matrix). 
+* `dmm.estimate_with_wmat(samples, wmat)` estimate with user-specified weight matrix. 
+  - Only usable with given standard deviation.
+  - Default: identity matrix.
+* `dmm.estimate_select(samples, threhold)` estimate with possibly fewer number of components. This methods only uses moments estimate whose sample variance is less than n*threhold.
+  - Default threhold=1. 
+
+
 Other methods
 =========
 
@@ -103,8 +117,8 @@ Useful tools for synthetic evaluation
 ======
 Random samples generation
 -----
-In Python, this is implemented by `sample_gm` in *model_gm.py*;
-In R, this is implemented by `sampleGM` in *gmmGM.R*. 
+* In Python, this is implemented by `sample_gm` in *model_gm.py*;
+* In R, this is implemented by `sampleGM` in *gmmGM.R*. 
 
 ### Script in Python
 ```python
@@ -120,8 +134,8 @@ In R, this is implemented by `sampleGM` in *gmmGM.R*.
 
 W<sub>1</sub> distance evaluation
 ----
-In Python, this is implemented by `wass` in *discrete_rv.py*;
-In R, this is implemented by `w1` in *gmmGM.R*. 
+* In Python, this is implemented by `wass` in *discrete_rv.py*;
+* In R, this is implemented by `w1` in *gmmGM.R*. 
 
 
 ### Script in Python
