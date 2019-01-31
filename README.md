@@ -9,7 +9,7 @@ Denoised Method of Moments (DMM)
 External dependencies
 ----
 * [Numpy and SciPy](https://www.scipy.org)
-* [CVXPY](http://www.cvxpy.org)(pre-1.0 version)
+* [CVXPY](http://www.cvxpy.org) (tested in pre-1.0 version)
 * [CVXOPT](http://cvxopt.org)
 
 
