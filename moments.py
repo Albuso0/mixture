@@ -6,6 +6,7 @@ import numpy as np
 import cvxpy
 from scipy.linalg import hankel
 from discrete_rv import DiscreteRV
+import warnings
 
 def empirical_moment(samples, degree):
     """ Compute empirical moments of samples
@@ -102,6 +103,17 @@ def projection(moments, interval=None, wmat=None):
         return moments
 
 
+    # preliminary filtering of moments based on range
+    r_max = max(abs(interval[0]),abs(interval[1]))
+    m_max = 1
+    for i in range(len(moments)):
+        m_max *= r_max
+        if moments[i] > m_max:
+            moments[i] = m_max
+        elif moments[i] < -m_max:
+            moments[i] = -m_max    
+
+    # SDP for further projection
     variables = cvxpy.Variable(length) # variables [m_1,m_2,...,m_n]
     if wmat is None:
         wmat = np.identity(length)
@@ -113,16 +125,16 @@ def projection(moments, interval=None, wmat=None):
     if length % 2 == 1:
         # odd case
         k = int((length+1)/2)
-        h_mat = cvxpy.Variable(k, k+1)
+        h_mat = cvxpy.Variable((k, k+1))
         constraints = [h_mat[:, 1:]-interval[0]*h_mat[:, :k]>>0,
                        interval[1]*h_mat[:, :k]-h_mat[:, 1:]>>0]
     else:
         # even case
         k = int(length/2)+1
-        h_mat = cvxpy.Variable(k, k)
+        h_mat = cvxpy.Variable((k, k))
         constraints = [h_mat>>0,
-                       (interval[0]+interval[1])*h_mat[:k-1, 1:]-interval[0]*interval[1]*h_mat[:k-1, :k-1]+h_mat[1:, 1:]>>0]
-    num_row, num_col = h_mat.size
+                       (interval[0]+interval[1])*h_mat[:k-1, 1:]-interval[0]*interval[1]*h_mat[:k-1, :k-1]-h_mat[1:, 1:]>>0]
+    num_row, num_col = h_mat.shape
     for i in range(num_row):
         for j in range(num_col):
             if i == 0 and j == 0:
@@ -131,7 +143,12 @@ def projection(moments, interval=None, wmat=None):
                 constraints.append(h_mat[i, j] == variables[i+j-1])
 
     prob = cvxpy.Problem(obj, constraints)
-    prob.solve(solver=cvxpy.CVXOPT)
+    try:
+        prob.solve(solver=cvxpy.CVXOPT)
+    except Exception as e:
+        warnings.warn("CVXOPT failed. Using SCS solver..."+str(e))
+        prob.solve(solver=cvxpy.SCS)
+        # prob.solve()
     # opt = prob.solve(solver=cvxpy.CVXOPT)
 
     return np.asarray(variables.value).reshape(moments.shape)
